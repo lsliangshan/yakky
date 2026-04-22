@@ -1,2 +1,61 @@
 # yakky
-`yakky`，一个“话多”的交互式问答 CLI 工具。它会像朋友一样跟你唠嗑，一步步引导你完成项目配置、初始化或任何需要决策的流程。你只需要回答问题，剩下的交给 yakky。它热情、灵活，不完成任务绝不闭嘴。
+
+A production-grade Node.js CLI toolkit built with TypeScript, Commander.js, Enquirer, Chalk, and Ora.
+
+## Installation
+
+```bash
+npm install -g yakky
+```
+
+## Usage
+
+```bash
+yakky --help
+yakky --version
+```
+
+### Commands
+
+**hello** — Say hello to someone:
+
+```bash
+yakky hello                   # Hello, world!
+yakky hello Yakky             # Hello, Yakky!
+yakky hello Yakky -g "Hi"    # Hi, Yakky!
+```
+
+**init** — Interactive project initialization:
+
+```bash
+yakky init
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Watch mode
+npm run dev
+
+# Run tests
+npm test
+
+# Type check
+npm run typecheck
+```
+
+## Publishing
+
+```bash
+npm publish
+```
+
+## License
+
+MIT
