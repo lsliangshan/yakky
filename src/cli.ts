@@ -11,6 +11,7 @@ import { template } from "./commands/template.js";
 import { repositry } from "./commands/repositry/index.js";
 import { repositryList } from "./commands/repositry/list.js";
 import { repositryAdd } from "./commands/repositry/add.js";
+import { initializeDatabase } from "./db/index.js";
 
 dataPaths.ensure();
 
@@ -124,4 +125,18 @@ repositryCmd
     }
   });
 
-program.parse(process.argv);
+// 主异步函数
+async function main() {
+  try {
+    // 初始化数据库
+    await initializeDatabase();
+
+    // 解析命令行参数
+    await program.parseAsync(process.argv);
+  } catch (error) {
+    logger.error(`程序执行失败: ${error}`);
+    process.exit(1);
+  }
+}
+
+main();
