@@ -1,9 +1,11 @@
 import { db } from "../../db/index.js";
-import { repositories, templates } from "../../db/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { repositories } from "../../db/schema.js";
+import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
+import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
 import Enquirer from "enquirer";
+import fs from "node:fs";
 
 export async function repositryRemove(args?: IRepositryArgs) {
   try {
@@ -47,6 +49,8 @@ export async function repositryRemove(args?: IRepositryArgs) {
       return;
     }
 
+    const repo = existing[0];
+
     // 确认删除
     const { confirm } = await Enquirer.prompt<{ confirm: boolean }>({
       type: "confirm",
@@ -60,22 +64,12 @@ export async function repositryRemove(args?: IRepositryArgs) {
       return;
     }
 
-    const repo = existing[0];
+    // 先删除 templates 目录
+    const repoPath = templatesPath(name);
+    fs.rmSync(repoPath, { recursive: true, force: true });
+    logger.highlight(`  已删除模板文件`);
 
-    // 检查是否有模板关联
-    const linkedTemplates = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(templates)
-      .where(eq(templates.repositoryId, repo.id));
-
-    if (linkedTemplates[0].count > 0) {
-      logger.error(
-        `仓库 "${name}" 下有 ${linkedTemplates[0].count} 个模板，请先删除模板`
-      );
-      return;
-    }
-
-    // 删除仓库
+    // 再删除数据库记录
     await db.delete(repositories).where(eq(repositories.name, name));
 
     logger.success(`仓库已删除: ${name}`);
