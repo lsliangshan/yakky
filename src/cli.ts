@@ -84,7 +84,6 @@ const repositryCmd = program
   .command("repo")
   .alias("repositry")
   .description("管理模板仓库")
-  .addHelpText("after", "\nUsage: yakky repositry <command>")
   .action(async () => {
     try {
       await repositry();
