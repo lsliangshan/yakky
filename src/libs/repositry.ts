@@ -4,6 +4,8 @@ import { logger } from "../utils/logger";
 import { repositryList } from "../commands/repositry/list";
 import { repositryAdd } from "../commands/repositry/add";
 import { repositryRemove } from "../commands/repositry/remove";
+import { repositrySync } from "../commands/repositry/sync";
+import { repositrySyncAll } from "../commands/repositry/sync-all";
 
 export function mount(program: Command) {
   const repositryCmd = program
@@ -58,6 +60,31 @@ export function mount(program: Command) {
         await repositryRemove(args);
       } catch (error) {
         logger.error(`仓库删除失败: ${error}`);
+        process.exit(1);
+      }
+    });
+
+  repositryCmd
+    .command("sync")
+    .description("从远端同步模板仓库")
+    .option("-n, --name [模板仓库名称]", "模板仓库名称")
+    .action(async (args) => {
+      try {
+        await repositrySync(args);
+      } catch (error) {
+        logger.error(`仓库同步失败: ${error}`);
+        process.exit(1);
+      }
+    });
+
+  repositryCmd
+    .command("sync-all")
+    .description("同步所有模板仓库")
+    .action(async () => {
+      try {
+        await repositrySyncAll();
+      } catch (error) {
+        logger.error(`仓库同步失败: ${error}`);
         process.exit(1);
       }
     });
