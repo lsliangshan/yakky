@@ -11,6 +11,7 @@ import { template } from "./commands/template.js";
 import { repositry } from "./commands/repositry/index.js";
 import { repositryList } from "./commands/repositry/list.js";
 import { repositryAdd } from "./commands/repositry/add.js";
+import { repositryRemove } from "./commands/repositry/remove.js";
 import { initializeDatabase } from "./db/index.js";
 
 dataPaths.ensure();
@@ -112,15 +113,26 @@ repositryCmd
   .option("-n, --name [模板仓库名称]", "模板仓库名称")
   .option("-u, --url [模板仓库地址]", "模板仓库地址")
   .usage("-n [模板仓库名称] -u [模板仓库地址]")
-  // .addHelpText(
-  //   "before",
-  //   "使用方式: yak repo add -n <模板仓库名称> -u <模板仓库地址>"
-  // )
   .action(async (args) => {
     try {
       await repositryAdd(args);
     } catch (error) {
-      logger.error(`仓库列表失败: ${error}`);
+      logger.error(`仓库添加失败: ${error}`);
+      process.exit(1);
+    }
+  });
+
+repositryCmd
+  .command("remove")
+  .alias("rm")
+  .alias("delete")
+  .description("删除仓库")
+  .option("-n, --name [模板仓库名称]", "模板仓库名称")
+  .action(async (args) => {
+    try {
+      await repositryRemove(args);
+    } catch (error) {
+      logger.error(`仓库删除失败: ${error}`);
       process.exit(1);
     }
   });
