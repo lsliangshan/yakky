@@ -1,9 +1,5 @@
 import { templatesPath } from "../utils/paths";
 
-export async function repositry() {
-  console.log("模板仓库管理");
-}
-
 export async function template(args?: any) {
   console.log("2模板: ", templatesPath());
   // logger.info("Starting project initialization...\n");

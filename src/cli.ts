@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { hello } from "./commands/hello.js";
-import { init } from "./commands/init.js";
 import { logger } from "./utils/logger.js";
 import { version } from "../package.json";
 import { getRandomSentence } from "./utils/random.js";
 import chalk from "chalk";
 import { create } from "./commands/create.js";
 import { dataPaths } from "./utils/paths.js";
-import { template, repositry } from "./commands/template.js";
+import { template } from "./commands/template.js";
+import { repositry } from "./commands/repositry/index.js";
+import { repositryList } from "./commands/repositry/list.js";
+import { repositryAdd } from "./commands/repositry/add.js";
 
 dataPaths.ensure();
 
@@ -77,14 +78,48 @@ const templateCmd = program
     }
   });
 
-templateCmd
-  .command("repositry")
+const repositryCmd = program
+  .command("repo")
+  .alias("repositry")
   .description("管理模板仓库")
+  .addHelpText("after", "\nUsage: yakky repositry <command>")
   .action(async () => {
     try {
       await repositry();
     } catch (error) {
       logger.error(`仓库操作失败: ${error}`);
+      process.exit(1);
+    }
+  });
+
+repositryCmd
+  .command("list")
+  .alias("ls")
+  .description("列出本地所有仓库")
+  .action(async () => {
+    try {
+      await repositryList();
+    } catch (error) {
+      logger.error(`仓库列表失败: ${error}`);
+      process.exit(1);
+    }
+  });
+
+repositryCmd
+  .command("add")
+  .description("添加仓库")
+  .option("-n, --name [模板仓库名称]", "模板仓库名称")
+  .option("-u, --url [模板仓库地址]", "模板仓库地址")
+  .usage("-n [模板仓库名称] -u [模板仓库地址]")
+  // .addHelpText(
+  //   "before",
+  //   "使用方式: yak repo add -n <模板仓库名称> -u <模板仓库地址>"
+  // )
+  .action(async (args) => {
+    try {
+      await repositryAdd(args);
+    } catch (error) {
+      logger.error(`仓库列表失败: ${error}`);
       process.exit(1);
     }
   });
