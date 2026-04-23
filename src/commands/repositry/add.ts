@@ -2,8 +2,13 @@ import { db } from "../../db/index.js";
 import { repositories } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
+import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
 import Enquirer from "enquirer";
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 
 async function askQuestions(args?: IRepositryArgs) {
   const questions = [];
@@ -16,7 +21,6 @@ async function askQuestions(args?: IRepositryArgs) {
         if (!value || value.trim() === "") {
           return "仓库名称不能为空";
         }
-        // 检查是否已存在同名仓库
         const existing = await db
           .select()
           .from(repositories)
@@ -54,6 +58,28 @@ async function askQuestions(args?: IRepositryArgs) {
   };
 }
 
+function downloadRepo(url: string, dest: string) {
+  if (url.startsWith("http") || url.startsWith("git@")) {
+    execSync(`git clone --depth 1 ${url} ${dest}`, { stdio: "pipe" });
+  } else {
+    fs.cpSync(url, dest, { recursive: true });
+  }
+}
+
+function copyTemplates(repoDir: string, name: string) {
+  const templatesSrc = path.join(repoDir, "templates");
+  const templatesDest = templatesPath(name, "templates");
+
+  fs.mkdirSync(templatesDest, { recursive: true });
+
+  if (fs.existsSync(templatesSrc)) {
+    fs.cpSync(templatesSrc, templatesDest, { recursive: true });
+    logger.success(`模板已下载成功`);
+  } else {
+    logger.warn("仓库中未找到 templates 目录，已创建空目录");
+  }
+}
+
 export async function repositryAdd(args?: IRepositryArgs) {
   try {
     // Start with provided args
@@ -83,7 +109,25 @@ export async function repositryAdd(args?: IRepositryArgs) {
       return;
     }
 
-    // 添加仓库
+    // 下载仓库并拷贝 templates
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "yakky-"));
+    try {
+      logger.info(`正在下载仓库: ${url}`);
+      downloadRepo(url, repoDir);
+      copyTemplates(repoDir, name);
+    } catch (error) {
+      logger.error(`下载仓库失败: ${error}`);
+      // 清理已创建的 templates 目录
+      const dest = templatesPath(name);
+      if (fs.existsSync(dest)) {
+        fs.rmSync(dest, { recursive: true, force: true });
+      }
+      return;
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+
+    // 写入数据库
     const newRepo = await db
       .insert(repositories)
       .values({
@@ -97,7 +141,6 @@ export async function repositryAdd(args?: IRepositryArgs) {
     logger.success(`仓库添加成功: ${newRepo[0].name}`);
     logger.highlight(`  ID: ${newRepo[0].id}`);
     logger.highlight(`  URL: ${newRepo[0].url}`);
-    // logger.highlight(`  类型: ${newRepo[0].type}`);
 
     return newRepo[0];
   } catch (error) {
