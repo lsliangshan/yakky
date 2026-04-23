@@ -1,5 +1,5 @@
 import { db } from "../../db/index.js";
-import { repositories } from "../../db/schema.js";
+import { repositories, templates } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
@@ -64,12 +64,15 @@ export async function repositryRemove(args?: IRepositryArgs) {
       return;
     }
 
-    // 先删除 templates 目录
+    // 先删除数据库中的模板记录
+    await db.delete(templates).where(eq(templates.repositoryId, repo.id));
+
+    // 再删除 templates 目录
     const repoPath = templatesPath(name);
     fs.rmSync(repoPath, { recursive: true, force: true });
     logger.highlight(`  已删除模板文件`);
 
-    // 再删除数据库记录
+    // 最后删除仓库记录
     await db.delete(repositories).where(eq(repositories.name, name));
 
     logger.success(`仓库已删除: ${name}`);

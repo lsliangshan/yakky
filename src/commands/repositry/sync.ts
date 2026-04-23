@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
+import { syncTemplatesTable } from "./template-utils.js";
 import Enquirer from "enquirer";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -84,6 +85,9 @@ export async function repositrySync(args?: IRepositryArgs) {
       } else {
         logger.warn("远端仓库中未找到 templates 目录，已创建空目录");
       }
+
+      // 同步模板数据到数据库
+      await syncTemplatesTable(repo.id, name);
 
       // 更新仓库 updatedAt
       await db

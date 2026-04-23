@@ -3,6 +3,7 @@ import { repositories } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
+import { syncTemplatesTable } from "./template-utils.js";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -60,6 +61,9 @@ export async function repositrySyncAll() {
           .update(repositories)
           .set({ updatedAt: new Date() })
           .where(eq(repositories.name, repo.name));
+
+        // 同步模板数据到数据库
+        await syncTemplatesTable(repo.id, repo.name);
 
         successCount++;
       } catch (error) {

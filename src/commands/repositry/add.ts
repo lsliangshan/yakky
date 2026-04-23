@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
+import { syncTemplatesTable } from "./template-utils.js";
 import Enquirer from "enquirer";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -141,6 +142,9 @@ export async function repositryAdd(args?: IRepositryArgs) {
     logger.success(`仓库添加成功: ${newRepo[0].name}`);
     logger.highlight(`  ID: ${newRepo[0].id}`);
     logger.highlight(`  URL: ${newRepo[0].url}`);
+
+    // 同步模板数据到数据库
+    await syncTemplatesTable(newRepo[0].id, name);
 
     return newRepo[0];
   } catch (error) {
