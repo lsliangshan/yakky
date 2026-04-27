@@ -13,7 +13,8 @@
       "Bash(npx drizzle-kit:*)",
       "Bash(git status:*)",
       "WebFetch(domain:www.npmjs.com)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx tsx:*)"
     ]
   }
 }

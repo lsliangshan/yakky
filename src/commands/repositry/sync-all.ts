@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
 import { syncTemplatesTable } from "./template-utils.js";
+import { createSpinner } from "../../utils/spinner.js";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -36,26 +37,27 @@ export async function repositrySyncAll() {
 
     for (const repo of allRepos) {
       const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "yakky-"));
+      const spinner = createSpinner(`[${repo.name}] 正在同步...`);
+      spinner.start();
       try {
-        logger.log(`\n[${repo.name}] 正在同步...`);
-
         downloadRepo(repo.url, repoDir);
 
         const templatesSrc = path.join(repoDir, "templates");
         const templatesDest = templatesPath(repo.name, "templates");
 
         if (fs.existsSync(templatesDest)) {
-          logger.info(`  [${repo.name}] 正在删除旧模板目录...`);
+          spinner.update(`[${repo.name}] 正在删除旧模板目录...`);
           fs.rmSync(templatesDest, { recursive: true, force: true });
         }
 
         fs.mkdirSync(templatesDest, { recursive: true });
 
+        spinner.update(`[${repo.name}] 正在复制模板文件...`);
         if (fs.existsSync(templatesSrc)) {
           fs.cpSync(templatesSrc, templatesDest, { recursive: true });
-          logger.success(`  ✓ 同步成功`);
+          spinner.succeed(`[${repo.name}] 同步成功`);
         } else {
-          logger.warn(`  - 未找到 templates 目录`);
+          spinner.info(`[${repo.name}] 未找到 templates 目录`);
         }
 
         await db
@@ -68,7 +70,7 @@ export async function repositrySyncAll() {
 
         successCount++;
       } catch (error) {
-        logger.error(`  ✗ 同步失败: ${error}`);
+        spinner.fail(`[${repo.name}] 同步失败: ${error}`);
         failCount++;
       } finally {
         fs.rmSync(repoDir, { recursive: true, force: true });

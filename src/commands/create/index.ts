@@ -3,6 +3,7 @@ import { templates, repositories } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { ICreateArgs } from "./types.js";
+import { createSpinner } from "../../utils/spinner.js";
 import Enquirer from "enquirer";
 import fs from "node:fs";
 import path from "node:path";
@@ -185,8 +186,10 @@ export async function create(args?: ICreateArgs) {
           logger.info(`已跳过 "${outputName}"`);
           continue;
         }
+        const copySpinner = createSpinner("正在生成模板文件...");
+        copySpinner.start();
         copyAndReplace(srcDir, fileResult.destDir, varAnswers, configAnswers);
-        logger.success(`模板已生成到: ${fileResult.destDir}`);
+        copySpinner.succeed(`模板已生成到: ${fileResult.destDir}`);
       }
 
       return;
@@ -402,8 +405,10 @@ export async function create(args?: ICreateArgs) {
       logger.info(`已跳过 "${outputName}"`);
       return;
     }
+    const copySpinner = createSpinner("正在生成模板文件...");
+    copySpinner.start();
     copyAndReplace(srcDir, interactResult.destDir, varAnswers, configAnswers);
-    logger.success(`模板已生成到: ${interactResult.destDir}`);
+    copySpinner.succeed(`模板已生成到: ${interactResult.destDir}`);
 
   } catch (error) {
     logger.error(`创建失败: ${error}`);

@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
 import { syncTemplatesTable } from "./template-utils.js";
+import { createSpinner } from "../../utils/spinner.js";
 import Enquirer from "enquirer";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -113,8 +114,10 @@ export async function repositryAdd(args?: IRepositryArgs) {
     // 下载仓库并拷贝 templates
     const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "yakky-"));
     try {
-      logger.info(`正在下载仓库: ${url}`);
+      const downloadSpinner = createSpinner("正在下载仓库...");
+      downloadSpinner.start();
       downloadRepo(url, repoDir);
+      downloadSpinner.succeed("仓库下载完成");
       copyTemplates(repoDir, name);
     } catch (error) {
       logger.error(`下载仓库失败: ${error}`);
@@ -144,7 +147,10 @@ export async function repositryAdd(args?: IRepositryArgs) {
     logger.highlight(`  URL: ${newRepo[0].url}`);
 
     // 同步模板数据到数据库
+    const syncSpinner = createSpinner("正在同步模板数据...");
+    syncSpinner.start();
     await syncTemplatesTable(newRepo[0].id, name);
+    syncSpinner.succeed("模板数据同步完成");
 
     return newRepo[0];
   } catch (error) {

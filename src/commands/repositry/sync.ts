@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
 import { syncTemplatesTable } from "./template-utils.js";
+import { createSpinner } from "../../utils/spinner.js";
 import Enquirer from "enquirer";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -66,7 +67,8 @@ export async function repositrySync(args?: IRepositryArgs) {
     // 下载仓库
     const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "yakky-"));
     try {
-      logger.info(`正在从 ${repo.url} 同步模板...`);
+      const downloadSpinner = createSpinner("正在同步模板...");
+      downloadSpinner.start();
       downloadRepo(repo.url, repoDir);
 
       const templatesSrc = path.join(repoDir, "templates");
@@ -74,7 +76,7 @@ export async function repositrySync(args?: IRepositryArgs) {
 
       // 先删除旧的模板目录和文件
       if (fs.existsSync(templatesDest)) {
-        logger.info(`正在删除旧模板目录...`);
+        downloadSpinner.update("正在删除旧模板目录...");
         fs.rmSync(templatesDest, { recursive: true, force: true });
       }
 
@@ -83,14 +85,18 @@ export async function repositrySync(args?: IRepositryArgs) {
 
       // 复制新模板文件
       if (fs.existsSync(templatesSrc)) {
+        downloadSpinner.update("正在复制模板文件...");
         fs.cpSync(templatesSrc, templatesDest, { recursive: true });
-        logger.success(`模板同步成功: ${name}`);
+        downloadSpinner.succeed("模板同步完成");
       } else {
-        logger.warn("远端仓库中未找到 templates 目录，已创建空目录");
+        downloadSpinner.info("远端仓库中未找到 templates 目录，已创建空目录");
       }
 
       // 同步模板数据到数据库
+      const syncSpinner = createSpinner("正在同步模板数据到数据库...");
+      syncSpinner.start();
       await syncTemplatesTable(repo.id, name);
+      syncSpinner.succeed("数据库同步完成");
 
       // 更新仓库 updatedAt
       await db
