@@ -49,6 +49,49 @@ function copyAndReplace(
   }
 }
 
+// ===== Conflict resolution =====
+
+async function handleExistingDir(
+  destDir: string,
+  outputName: string,
+): Promise<{ action: "skip" | "proceed"; destDir: string; outputName: string }> {
+  if (!fs.existsSync(destDir)) {
+    return { action: "proceed", destDir, outputName };
+  }
+
+  logger.warn(`"${outputName}" 目录已存在`);
+  const { choice } = await Enquirer.prompt<{ choice: string }>({
+    type: "select",
+    name: "choice",
+    message: `请选择操作:`,
+    choices: [
+      { name: "skip", message: "忽略" },
+      { name: "overwrite", message: "覆盖" },
+      { name: "rename", message: "重命名" },
+    ],
+  });
+
+  if (choice === "skip") {
+    return { action: "skip", destDir, outputName };
+  }
+
+  if (choice === "overwrite") {
+    fs.rmSync(destDir, { recursive: true, force: true });
+    return { action: "proceed", destDir, outputName };
+  }
+
+  // rename
+  const { newName } = await Enquirer.prompt<{ newName: string }>({
+    type: "input",
+    name: "newName",
+    message: "请输入新的文件夹名称:",
+    initial: `${outputName}-副本`,
+  });
+
+  const newDestDir = path.join(process.cwd(), newName);
+  return handleExistingDir(newDestDir, newName);
+}
+
 export async function create(args?: ICreateArgs) {
   try {
     // ===== FILE MODE =====
@@ -136,9 +179,14 @@ export async function create(args?: ICreateArgs) {
           logger.log(`  变量: ${JSON.stringify(varAnswers)}`);
         }
 
-        // Step 9: Copy and replace
-        copyAndReplace(srcDir, destDir, varAnswers, configAnswers);
-        logger.success(`模板已生成到: ${destDir}`);
+        // Step 9: Handle existing directory + copy
+        const fileResult = await handleExistingDir(destDir, outputName);
+        if (fileResult.action === "skip") {
+          logger.info(`已跳过 "${outputName}"`);
+          continue;
+        }
+        copyAndReplace(srcDir, fileResult.destDir, varAnswers, configAnswers);
+        logger.success(`模板已生成到: ${fileResult.destDir}`);
       }
 
       return;
@@ -349,8 +397,13 @@ export async function create(args?: ICreateArgs) {
     }
 
     // 9. 复制模板文件并替换变量占位符
-    copyAndReplace(srcDir, destDir, varAnswers, configAnswers);
-    logger.success(`模板已生成到: ${destDir}`);
+    const interactResult = await handleExistingDir(destDir, outputName);
+    if (interactResult.action === "skip") {
+      logger.info(`已跳过 "${outputName}"`);
+      return;
+    }
+    copyAndReplace(srcDir, interactResult.destDir, varAnswers, configAnswers);
+    logger.success(`模板已生成到: ${interactResult.destDir}`);
 
   } catch (error) {
     logger.error(`创建失败: ${error}`);
