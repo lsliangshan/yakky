@@ -1,7 +1,11 @@
 import ora from "ora";
 import chalk from "chalk";
+import { config } from "../common/config.js";
 
-export function createSpinner(text: string, spinnerStyle: string = "material") {
+export function createSpinner(
+  text: string,
+  spinnerStyle: string = config.spinnerStyle
+) {
   const spinner = ora({ text, color: "cyan", spinner: spinnerStyle as any });
   let shown = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
