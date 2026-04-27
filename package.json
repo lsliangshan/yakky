@@ -35,7 +35,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "docs": "node scripts/generate-docs.mjs"
   },
   "publishConfig": {
     "access": "public"
