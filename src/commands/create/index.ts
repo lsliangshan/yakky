@@ -7,8 +7,144 @@ import Enquirer from "enquirer";
 import fs from "node:fs";
 import path from "node:path";
 
+// ===== Template copy helpers =====
+
+function resolveName(name: string, vars: Record<string, string>, config: Record<string, any>) {
+  let resolved = name;
+  for (const [key, val] of Object.entries(vars)) {
+    resolved = resolved.split(key).join(val);
+  }
+  for (const [key, val] of Object.entries(config)) {
+    resolved = resolved.split(`$$${key}$$`).join(String(val));
+  }
+  return resolved;
+}
+
+function copyAndReplace(
+  src: string,
+  dest: string,
+  vars: Record<string, string>,
+  config: Record<string, any>,
+) {
+  fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const resolvedName = resolveName(entry.name, vars, config);
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, resolvedName);
+
+    if (entry.isDirectory()) {
+      copyAndReplace(srcPath, destPath, vars, config);
+    } else {
+      let content = fs.readFileSync(srcPath, "utf-8");
+      for (const [key, val] of Object.entries(vars)) {
+        content = content.split(key).join(val);
+      }
+      for (const [key, val] of Object.entries(config)) {
+        content = content.split(`$$${key}$$`).join(String(val));
+      }
+      fs.writeFileSync(destPath, content, "utf-8");
+    }
+  }
+}
+
 export async function create(args?: ICreateArgs) {
   try {
+    // ===== FILE MODE =====
+    if (args?.file) {
+      const raw = JSON.parse(fs.readFileSync(args.file, "utf-8"));
+      const items: any[] = Array.isArray(raw) ? raw : [raw];
+
+      for (const item of items) {
+        if (!item.repositry || !item.template) {
+          logger.error(`配置项缺少必填字段: repositry, template`);
+          continue;
+        }
+
+        const result = await db
+          .select({
+            id: templates.id,
+            name: templates.name,
+            repositryName: templates.repositryName,
+            path: templates.path,
+            description: templates.description,
+            tags: templates.tags,
+            configs: templates.configs,
+            variables: templates.variables,
+          })
+          .from(templates)
+          .where(
+            and(
+              eq(templates.name, item.template),
+              eq(templates.repositryName, item.repositry),
+            ),
+          )
+          .limit(1);
+
+        if (result.length === 0) {
+          logger.error(`模板 "${item.template}" (${item.repositry}) 不存在`);
+          continue;
+        }
+
+        const tpl = result[0];
+        logger.info(`使用模板: ${tpl.name} (${tpl.repositryName})`);
+
+        // Build config answers from file (keyed by config.name)
+        const configAnswers: Record<string, any> = {};
+        for (const c of tpl.configs || []) {
+          if (item.configs?.[c.name] !== undefined) {
+            configAnswers[c.name] = item.configs[c.name];
+          }
+        }
+
+        // Build variable answers from file (keyed by variable.template)
+        const varAnswers: Record<string, string> = {};
+        for (const v of tpl.variables || []) {
+          if (item.variables?.[v.value] !== undefined) {
+            varAnswers[v.template] = String(item.variables[v.value]);
+          }
+        }
+
+        // Step 6: Determine source directory
+        const pathSegments = tpl.configs?.map((c: any) => String(configAnswers[c.name] ?? "")) ?? [];
+        const path1 = pathSegments.filter(Boolean).join("/");
+        const srcDir = path.join(tpl.path, path1, "template");
+
+        if (!fs.existsSync(srcDir)) {
+          logger.error(`模板目录不存在: ${srcDir}`);
+          continue;
+        }
+
+        // Step 7: Output directory name
+        const nameVar = tpl.variables?.find((v: any) => v.value === "name");
+        const outputName = nameVar ? varAnswers[nameVar.template] : item.template;
+
+        if (!outputName) {
+          logger.error("未能确定输出目录名称");
+          continue;
+        }
+
+        const destDir = path.join(process.cwd(), outputName);
+
+        // Step 8: Show info
+        logger.highlight(`  输出: ${outputName}`);
+        if (Object.keys(configAnswers).length) {
+          logger.log(`  配置: ${JSON.stringify(configAnswers)}`);
+        }
+        if (Object.keys(varAnswers).length) {
+          logger.log(`  变量: ${JSON.stringify(varAnswers)}`);
+        }
+
+        // Step 9: Copy and replace
+        copyAndReplace(srcDir, destDir, varAnswers, configAnswers);
+        logger.success(`模板已生成到: ${destDir}`);
+      }
+
+      return;
+    }
+
+    // ===== INTERACTIVE MODE =====
     // 1. 选择仓库
     let repoName = args?.repositry;
     if (!repoName) {
@@ -213,46 +349,6 @@ export async function create(args?: ICreateArgs) {
     }
 
     // 9. 复制模板文件并替换变量占位符
-    function resolveName(name: string, vars: Record<string, string>, config: Record<string, any>) {
-      let resolved = name;
-      for (const [key, val] of Object.entries(vars)) {
-        resolved = resolved.split(key).join(val);
-      }
-      for (const [key, val] of Object.entries(config)) {
-        resolved = resolved.split(`$$${key}$$`).join(String(val));
-      }
-      return resolved;
-    }
-
-    function copyAndReplace(
-      src: string,
-      dest: string,
-      vars: Record<string, string>,
-      config: Record<string, any>,
-    ) {
-      fs.mkdirSync(dest, { recursive: true });
-      const entries = fs.readdirSync(src, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const resolvedName = resolveName(entry.name, vars, config);
-        const srcPath = path.join(src, entry.name);
-        const destPath = path.join(dest, resolvedName);
-
-        if (entry.isDirectory()) {
-          copyAndReplace(srcPath, destPath, vars, config);
-        } else {
-          let content = fs.readFileSync(srcPath, "utf-8");
-          for (const [key, val] of Object.entries(vars)) {
-            content = content.split(key).join(val);
-          }
-          for (const [key, val] of Object.entries(config)) {
-            content = content.split(`$$${key}$$`).join(String(val));
-          }
-          fs.writeFileSync(destPath, content, "utf-8");
-        }
-      }
-    }
-
     copyAndReplace(srcDir, destDir, varAnswers, configAnswers);
     logger.success(`模板已生成到: ${destDir}`);
 
@@ -261,3 +357,4 @@ export async function create(args?: ICreateArgs) {
     throw error;
   }
 }
+
