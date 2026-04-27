@@ -3,7 +3,6 @@ import { template } from "../commands/template/index.js";
 import { logger } from "../utils/logger";
 import { templateList } from "../commands/template/list";
 import { templateInfo } from "../commands/template/info";
-import { templateDelete } from "../commands/template/delete";
 
 export function mount(program: Command) {
   const templateCmd = program
@@ -45,18 +44,4 @@ export function mount(program: Command) {
       }
     });
 
-  templateCmd
-    .command("delete")
-    .alias("rm")
-    .alias("remove")
-    .description("删除模板")
-    .option("-n, --name [模板名称]", "模板名称")
-    .action(async (args) => {
-      try {
-        await templateDelete(args);
-      } catch (error) {
-        logger.error(`模板删除失败: ${error}`);
-        process.exit(1);
-      }
-    });
 }
