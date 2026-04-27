@@ -51,14 +51,6 @@ export async function create(args?: ICreateArgs) {
       }
 
       const repoId = repo[0].id;
-      const repoDir = path.dirname(
-        (await db
-          .select({ path: templates.path })
-          .from(templates)
-          .where(eq(templates.repositoryId, repoId))
-          .limit(1)
-        )[0]?.path ?? ""
-      );
 
       const tplList = await db
         .select({ name: templates.name })
@@ -117,10 +109,21 @@ export async function create(args?: ICreateArgs) {
     // 4. 收集配置项
     const configAnswers: Record<string, any> = {};
     if (tpl.configs?.length) {
+      const choiceTypes = ["select", "multiselect", "autocomplete"];
       for (const c of tpl.configs) {
-        if (c.type === "select" && c.choices?.length) {
+        const type = c.type || "input";
+
+        if (choiceTypes.includes(type) && c.choices?.length) {
+          // choice-based prompt: map displayed name → stored value
+          const choiceMap = new Map(
+            c.choices.map((ch: any) => {
+              const key = ch.name || ch.value || ch;
+              const val = ch.value ?? ch.name ?? ch;
+              return [key, val];
+            }),
+          );
           const answer = await Enquirer.prompt<any>({
-            type: "select",
+            type,
             name: c.name,
             message: c.message || `请选择 ${c.name}`,
             choices: c.choices.map((ch: any) => ({
@@ -129,13 +132,19 @@ export async function create(args?: ICreateArgs) {
               value: ch.value ?? ch.name ?? ch,
             })),
           });
-          configAnswers[c.name] = answer[c.name];
+          if (type === "multiselect") {
+            configAnswers[c.name] = answer[c.name].map((v: any) => choiceMap.get(v) ?? v);
+          } else {
+            configAnswers[c.name] = choiceMap.get(answer[c.name]) ?? answer[c.name];
+          }
         } else {
+          // standard prompt: pass type directly to Enquirer
           const answer = await Enquirer.prompt<any>({
-            type: "input",
+            type,
             name: c.name,
             message: c.message || `请输入 ${c.name}`,
-            initial: c.default ?? "",
+            initial: c.default ?? (type === "confirm" || type === "toggle" ? true : ""),
+            ...(type === "form" && c.choices ? { choices: c.choices } : {}),
           });
           configAnswers[c.name] = answer[c.name];
         }
@@ -153,14 +162,37 @@ export async function create(args?: ICreateArgs) {
           message: v.message || `请输入 ${v.value}`,
           initial: v.default ?? "",
         });
-        varAnswers[v.value] = answer[v.value];
+        varAnswers[v.template] = answer[v.value];
       }
     }
 
-    // 6. 确认信息
+    // 6. 根据 config 反馈值拼接子路径，确定源目录
+    const pathSegments = tpl.configs?.map((c: any) => String(configAnswers[c.name] ?? "")) ?? [];
+    const path1 = pathSegments.filter(Boolean).join("/");
+    const srcDir = path.join(tpl.path, path1, "template");
+
+    if (!fs.existsSync(srcDir)) {
+      logger.error(`模板目录不存在: ${srcDir}`);
+      logger.info(`期望路径: ${path.join(tpl.path, path1, "template")}`);
+      return;
+    }
+
+    // 7. 确定输出目录名（取自 variable 中 value="name" 的输入值）
+    const nameVar = tpl.variables?.find((v: any) => v.value === "name");
+    const outputName = nameVar ? varAnswers[nameVar.template] : templateName;
+
+    if (!outputName) {
+      logger.error("未能确定输出目录名称");
+      return;
+    }
+
+    const destDir = path.join(process.cwd(), outputName);
+
+    // 8. 确认信息
     console.log("");
     logger.highlight(`  模板: ${tpl.name}`);
     logger.highlight(`  仓库: ${tpl.repositryName}`);
+    logger.highlight(`  输出: ${outputName}`);
     if (Object.keys(configAnswers).length) {
       logger.log(`  配置: ${JSON.stringify(configAnswers)}`);
     }
@@ -180,35 +212,41 @@ export async function create(args?: ICreateArgs) {
       return;
     }
 
-    // 7. 复制模板文件到目标目录
-    const srcDir = tpl.path;
-    const destDir = path.join(process.cwd(), templateName);
-
-    if (!fs.existsSync(srcDir)) {
-      logger.error(`模板目录不存在: ${srcDir}`);
-      return;
+    // 9. 复制模板文件并替换变量占位符
+    function resolveName(name: string, vars: Record<string, string>, config: Record<string, any>) {
+      let resolved = name;
+      for (const [key, val] of Object.entries(vars)) {
+        resolved = resolved.split(key).join(val);
+      }
+      for (const [key, val] of Object.entries(config)) {
+        resolved = resolved.split(`$$${key}$$`).join(String(val));
+      }
+      return resolved;
     }
 
-    // 替换变量并复制
-    function copyAndReplace(src: string, dest: string, vars: Record<string, string>, config: Record<string, any>) {
+    function copyAndReplace(
+      src: string,
+      dest: string,
+      vars: Record<string, string>,
+      config: Record<string, any>,
+    ) {
       fs.mkdirSync(dest, { recursive: true });
       const entries = fs.readdirSync(src, { withFileTypes: true });
 
       for (const entry of entries) {
+        const resolvedName = resolveName(entry.name, vars, config);
         const srcPath = path.join(src, entry.name);
-        const destPath = path.join(dest, entry.name);
+        const destPath = path.join(dest, resolvedName);
 
         if (entry.isDirectory()) {
           copyAndReplace(srcPath, destPath, vars, config);
         } else {
           let content = fs.readFileSync(srcPath, "utf-8");
-          // 替换变量占位符
           for (const [key, val] of Object.entries(vars)) {
-            content = content.replace(new RegExp(`\\$\\$${key}\\$\\$`, "g"), val);
+            content = content.split(key).join(val);
           }
-          // 替换配置占位符
           for (const [key, val] of Object.entries(config)) {
-            content = content.replace(new RegExp(`\\$\\$${key}\\$\\$`, "g"), String(val));
+            content = content.split(`$$${key}$$`).join(String(val));
           }
           fs.writeFileSync(destPath, content, "utf-8");
         }

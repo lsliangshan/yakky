@@ -10,7 +10,10 @@
       "Bash(npm pack:*)",
       "Bash(./dist/cli.js:*)",
       "Bash(printf \"test-repo\\\\nexample-url\\\\n\")",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "Bash(git status:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebSearch"
     ]
   }
 }
