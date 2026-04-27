@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { ICreateArgs } from "./types.js";
 import { createSpinner } from "../../utils/spinner.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 import chalk from "chalk";
 import Enquirer from "enquirer";
 import fs from "node:fs";
@@ -96,6 +97,8 @@ async function handleExistingDir(
 
 export async function create(args?: ICreateArgs) {
   try {
+    await ensureOfficialRepos();
+
     // ===== FILE MODE =====
     if (args?.file) {
       console.log(chalk.yellow("ℹ 提示: 可用 yak sample-file 命令生成模板示例配置文件"));

@@ -6,6 +6,7 @@ import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
 import { syncTemplatesTable } from "./template-utils.js";
 import { createSpinner } from "../../utils/spinner.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 import Enquirer from "enquirer";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -84,6 +85,7 @@ function copyTemplates(repoDir: string, name: string) {
 
 export async function repositryAdd(args?: IRepositryArgs) {
   try {
+    await ensureOfficialRepos();
     // Start with provided args
     let repoInfo = args ? { ...args } : {};
 

@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
 import { syncTemplatesTable } from "./template-utils.js";
 import { createSpinner } from "../../utils/spinner.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -20,6 +21,7 @@ function downloadRepo(url: string, dest: string) {
 
 export async function repositrySyncAll() {
   try {
+    await ensureOfficialRepos();
     const allRepos = await db
       .select()
       .from(repositories)

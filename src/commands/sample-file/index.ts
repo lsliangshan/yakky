@@ -3,11 +3,14 @@ import { templates, repositories } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { ISampleFileArgs } from "./types.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 import Enquirer from "enquirer";
 import fs from "node:fs";
 import path from "node:path";
 
 export async function sampleFile(args?: ISampleFileArgs) {
+  await ensureOfficialRepos();
+
   // 1. 选择仓库
   let repoName = args?.repositry;
   if (!repoName) {

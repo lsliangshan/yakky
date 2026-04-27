@@ -2,9 +2,11 @@ import { db } from "../../db/index.js";
 import { repositories } from "../../db/schema.js";
 import { desc } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 
 export async function repositryList() {
   try {
+    await ensureOfficialRepos();
     const allRepos = await db
       .select()
       .from(repositories)

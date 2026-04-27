@@ -2,6 +2,7 @@ import { db } from "../../db/index.js";
 import { templates } from "../../db/schema.js";
 import { desc } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 
 function visualLen(s: string): number {
   let len = 0;
@@ -17,6 +18,7 @@ function padVisual(s: string, len: number): string {
 
 export async function templateList() {
   try {
+    await ensureOfficialRepos();
     const allTemplates = await db
       .select({
         id: templates.id,

@@ -4,11 +4,14 @@ import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
+import { config } from "../../common/config.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 import Enquirer from "enquirer";
 import fs from "node:fs";
 
 export async function repositryRemove(args?: IRepositryArgs) {
   try {
+    await ensureOfficialRepos();
     let name = args?.name;
 
     // If name is missing, ask interactively
@@ -50,6 +53,13 @@ export async function repositryRemove(args?: IRepositryArgs) {
     }
 
     const repo = existing[0];
+
+    // 检查是否为官方仓库（禁止删除）
+    const officialNames = config.officialRepositories.map((r) => r.name);
+    if (officialNames.includes(name)) {
+      logger.error(`"${name}" 是官方仓库，不允许删除`);
+      return;
+    }
 
     // 确认删除
     const { confirm } = await Enquirer.prompt<{ confirm: boolean }>({

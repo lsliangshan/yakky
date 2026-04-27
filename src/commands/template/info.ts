@@ -2,6 +2,7 @@ import { db } from "../../db/index.js";
 import { templates } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 import { ITemplateArgs } from "./types.js";
 import Enquirer from "enquirer";
 
@@ -40,6 +41,7 @@ function printArray(label: string, arr: string[] | null | undefined, emptyText: 
 
 export async function templateInfo(args?: ITemplateArgs) {
   try {
+    await ensureOfficialRepos();
     let name = args?.name;
 
     if (!name) {

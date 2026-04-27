@@ -6,6 +6,7 @@ import { templatesPath } from "../../utils/paths.js";
 import { IRepositryArgs } from "./types.js";
 import { syncTemplatesTable } from "./template-utils.js";
 import { createSpinner } from "../../utils/spinner.js";
+import { ensureOfficialRepos } from "../../utils/ensure-official.js";
 import Enquirer from "enquirer";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -22,6 +23,7 @@ function downloadRepo(url: string, dest: string) {
 
 export async function repositrySync(args?: IRepositryArgs) {
   try {
+    await ensureOfficialRepos();
     let name = args?.name;
 
     // If name is missing, list all repos for the user to choose
