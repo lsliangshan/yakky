@@ -45,6 +45,7 @@ export async function repositrySyncAll() {
         const templatesDest = templatesPath(repo.name, "templates");
 
         if (fs.existsSync(templatesDest)) {
+          logger.info(`  [${repo.name}] 正在删除旧模板目录...`);
           fs.rmSync(templatesDest, { recursive: true, force: true });
         }
 

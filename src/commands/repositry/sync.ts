@@ -72,13 +72,16 @@ export async function repositrySync(args?: IRepositryArgs) {
       const templatesSrc = path.join(repoDir, "templates");
       const templatesDest = templatesPath(name, "templates");
 
-      // 删除旧模板目录
+      // 先删除旧的模板目录和文件
       if (fs.existsSync(templatesDest)) {
+        logger.info(`正在删除旧模板目录...`);
         fs.rmSync(templatesDest, { recursive: true, force: true });
       }
 
+      // 重新创建空目录
       fs.mkdirSync(templatesDest, { recursive: true });
 
+      // 复制新模板文件
       if (fs.existsSync(templatesSrc)) {
         fs.cpSync(templatesSrc, templatesDest, { recursive: true });
         logger.success(`模板同步成功: ${name}`);

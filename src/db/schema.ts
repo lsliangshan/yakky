@@ -28,6 +28,8 @@ export const templates = sqliteTable("templates", {
   description: text("description"),
   tags: text("tags", { mode: "json" }).$type<string[]>(),
   metadata: text("metadata", { mode: "json" }).$type<Record<string, any>>(),
+  configs: text("configs", { mode: "json" }).$type<Record<string, any>[]>(),
+  variables: text("variables", { mode: "json" }).$type<Record<string, any>[]>(),
   createdAt: integer("created_at", { mode: "timestamp" })
     .default(sql`(unixepoch())`)
     .notNull(),
