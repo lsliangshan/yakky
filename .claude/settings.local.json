@@ -14,7 +14,9 @@
       "Bash(git status:*)",
       "WebFetch(domain:www.npmjs.com)",
       "WebSearch",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(sed -i '' '185,186d' src/commands/repositry/init.ts)",
+      "Bash(sed -i '' '185s/.*/\\\\t    logger.log\\(`          │   └── README.md`\\);/' src/commands/repositry/init.ts)"
     ]
   }
 }

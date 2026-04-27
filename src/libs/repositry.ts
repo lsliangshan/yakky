@@ -6,6 +6,7 @@ import { repositryAdd } from "../commands/repositry/add";
 import { repositryRemove } from "../commands/repositry/remove";
 import { repositrySync } from "../commands/repositry/sync";
 import { repositrySyncAll } from "../commands/repositry/sync-all";
+import { repositryInit } from "../commands/repositry/init";
 
 export function mount(program: Command) {
   const repositryCmd = program
@@ -85,6 +86,20 @@ export function mount(program: Command) {
         await repositrySyncAll();
       } catch (error) {
         logger.error(`仓库同步失败: ${error}`);
+        process.exit(1);
+      }
+    });
+
+  repositryCmd
+    .command("init")
+    .description("初始化模板仓库项目结构")
+    .option("-n, --name <模板名称>", "模板名称（templates 下的第一个模板名）")
+    .option("-d, --dir <目录>", "项目输出目录")
+    .action(async (args) => {
+      try {
+        await repositryInit(args);
+      } catch (error) {
+        logger.error(`初始化失败: ${error}`);
         process.exit(1);
       }
     });

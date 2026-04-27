@@ -13,6 +13,7 @@ yakky 是一个交互式脚手架工具，通过模板快速创建项目。
   - [`repo remove`](#repo-remove)
   - [`repo sync`](#repo-sync)
   - [`repo sync-all`](#repo-sync-all)
+  - [`repo init`](#repo-init)
 - [`sample-file`](#sample-file)
 - [`template`](#template)
   - [`template list`](#template-list)
@@ -334,6 +335,86 @@ yakky repo sync-all
 ```
 
 
+### `repo init`
+
+初始化模板仓库项目结构
+
+
+初始化一个模板仓库项目结构，用于创建和管理自定义模板。
+
+该命令会在指定目录下创建完整的模板仓库脚手架，包含目录结构、示例模板文件和 `roadmap.json` 配置文件。创建完成后可使用 `yakky repo add` 将其添加到本地。
+
+
+**操作流程：**
+
+1. 如果未提供 `-d` 或 `-n`，交互式输入目录名称和模板名称
+2. 检查输出目录是否存在（已存在时询问是否覆盖）
+3. 创建模板仓库目录结构
+4. 生成示例模板文件（含占位符）和 `roadmap.json`
+
+**生成的目录结构：**
+
+```
+<dir>/
+  templates/
+    <template-name>/
+      template/
+        $NAME$.ts            # 变量占位符演示
+        $NAME$.config.ts     # 配置项占位符演示（$$language$$）
+        README.md             # 综合占位符演示
+      roadmap.json
+```
+
+**生成的 roadmap.json 示例：**
+
+```json
+{
+  "name": "my-template",
+  "description": "模板描述",
+  "tags": ["demo"],
+  "configs": [
+    {
+      "name": "language",
+      "type": "select",
+      "message": "请选择语言",
+      "choices": [
+        { "name": "JavaScript", "value": "js" },
+        { "name": "TypeScript", "value": "ts" }
+      ],
+      "default": "js"
+    }
+  ],
+  "variables": [
+    { "value": "name", "template": "$NAME$", "message": "项目名称" }
+  ]
+}
+```
+
+**生成的示例模板文件说明：**
+
+| 文件 | 演示内容 |
+|------|----------|
+| `$NAME$.ts` | 变量占位符 `$NAME$`、`$VERSION$` 替换 |
+| `$NAME$.config.ts` | 配置项占位符 `$$language$$`、`$$method$$` 替换 |
+| `README.md` | 变量和配置项占位符综合替换 |
+
+**后续步骤：**
+
+1. 编辑 `roadmap.json` 定义模板的配置项和变量
+2. 在 `template/` 目录下添加或修改模板文件
+3. 将仓库推送到 Git 远程仓库
+4. 使用 `yakky repo add -n <名称> -u <地址>` 添加仓库到本地
+
+| 选项 | 说明 |
+|------|------|
+| `-n, --name <模板名称>` | 模板名称（templates 下的第一个模板名） |
+| `-d, --dir <目录>` | 项目输出目录 |
+
+```bash
+yakky repo init [--name <模板名称>] [--dir <目录>]
+```
+
+
 
 ---
 
@@ -587,6 +668,7 @@ my-template-repo/
   - `yakky repo remove`
   - `yakky repo sync`
   - `yakky repo sync-all`
+  - `yakky repo init`
 - `yakky sample-file`
 - `yakky template`
   - `yakky template list`
