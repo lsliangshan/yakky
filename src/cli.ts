@@ -10,6 +10,7 @@ import { initializeDatabase } from "./db/index.js";
 import { mount as mountRepositry } from "./libs/repositry.js";
 import { mount as mountTemplate } from "./libs/template.js";
 import { mount as mountCreate } from "./libs/create.js";
+import { mount as mountSampleFile } from "./libs/sample-file.js";
 
 dataPaths.ensure();
 
@@ -25,6 +26,7 @@ program.name("yakky").helpOption("-h, --help", "显示帮助信息");
 mountRepositry(program);
 mountTemplate(program);
 mountCreate(program);
+mountSampleFile(program);
 
 // 主异步函数
 async function main() {

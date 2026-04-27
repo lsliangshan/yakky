@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 import { ICreateArgs } from "./types.js";
 import { createSpinner } from "../../utils/spinner.js";
+import chalk from "chalk";
 import Enquirer from "enquirer";
 import fs from "node:fs";
 import path from "node:path";
@@ -97,7 +98,20 @@ export async function create(args?: ICreateArgs) {
   try {
     // ===== FILE MODE =====
     if (args?.file) {
-      const raw = JSON.parse(fs.readFileSync(args.file, "utf-8"));
+      console.log(chalk.yellow("ℹ 提示: 可用 yak sample-file 命令生成模板示例配置文件"));
+
+      if (!args.file.endsWith(".json")) {
+        logger.error(`不支持的文件格式 "${path.extname(args.file)}"，仅支持 .json`);
+        return;
+      }
+
+      let raw: any;
+      try {
+        raw = JSON.parse(fs.readFileSync(args.file, "utf-8"));
+      } catch {
+        logger.error(`配置文件 "${args.file}" 格式不正确，请检查 JSON 语法`);
+        return;
+      }
       const items: any[] = Array.isArray(raw) ? raw : [raw];
 
       for (const item of items) {
