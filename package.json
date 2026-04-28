@@ -1,6 +1,6 @@
 {
   "name": "yakky",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Your talkative CLI sidekick that never runs out of questions.",
   "type": "module",
   "main": "./dist/index.js",

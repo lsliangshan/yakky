@@ -167,6 +167,16 @@ export async function create(args?: ICreateArgs) {
           }
         }
 
+        // 检查 name 变量是否必填
+        const hasName = tpl.variables?.some((v: any) => v.value === "name");
+        if (hasName) {
+          const rawName = item.variables?.name;
+          if (rawName !== undefined && String(rawName).trim() === "") {
+            logger.error(`"${item.template}" 的项目名称不能为空`);
+            continue;
+          }
+        }
+
         // Step 6: Determine source directory
         const pathSegments = tpl.configs?.map((c: any) => String(configAnswers[c.name] ?? "")) ?? [];
         const path1 = pathSegments.filter(Boolean).join("/");
@@ -365,6 +375,10 @@ export async function create(args?: ICreateArgs) {
           name: v.value,
           message: v.message || `请输入 ${v.value}`,
           initial: v.default ?? "",
+          validate: v.value === "name" ? (value: string) => {
+            if (!value || value.trim() === "") return "项目名称不能为空";
+            return true;
+          } : undefined,
         });
         varAnswers[v.template] = answer[v.value];
       }
