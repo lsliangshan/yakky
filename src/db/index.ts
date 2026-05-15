@@ -42,6 +42,7 @@ function ensureDatabase(): void {
   if (initialized) return;
 
   ensureTables();
+  ensureShortcutCommandColumns();
   applyMigrations();
   initialized = true;
 }
@@ -183,6 +184,26 @@ function ensureTables(): void {
   }
 }
 
+function ensureShortcutCommandColumns(): void {
+  const sqlite = getSqlite();
+  const table = sqlite
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get("shortcut_commands");
+
+  if (!table) return;
+
+  const columns = new Set(
+    sqlite
+      .prepare("PRAGMA table_info(shortcut_commands)")
+      .all()
+      .map((row: any) => row.name),
+  );
+
+  if (!columns.has("description")) {
+    sqlite.exec('ALTER TABLE "shortcut_commands" ADD COLUMN "description" TEXT');
+  }
+}
+
 // 数据库初始化函数
 export async function initializeDatabase(): Promise<typeof db> {
   ensureDatabase();
@@ -258,6 +279,8 @@ function applyMigrations(): void {
 export type Database = typeof db;
 export type NewRepository = typeof schema.repositories.$inferInsert;
 export type Repository = typeof schema.repositories.$inferSelect;
+export type NewShortcutCommand = typeof schema.shortcutCommands.$inferInsert;
+export type ShortcutCommand = typeof schema.shortcutCommands.$inferSelect;
 export type NewTemplate = typeof schema.templates.$inferInsert;
 export type Template = typeof schema.templates.$inferSelect;
 export type NewProject = typeof schema.projects.$inferInsert;

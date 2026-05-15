@@ -61,6 +61,22 @@ export const configs = sqliteTable("configs", {
     .notNull(),
 });
 
+// 快捷命令表
+export const shortcutCommands = sqliteTable("shortcut_commands", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  description: text("description"),
+  workspacePath: text("workspace_path"),
+  script: text("script").notNull(),
+  scriptPath: text("script_path"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+});
+
 // 审计日志表（可选）
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),

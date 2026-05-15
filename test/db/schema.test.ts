@@ -5,17 +5,34 @@ import * as schema from '../../src/db/schema.js';
 import fs from 'fs';
 import path from 'path';
 
-// 读取迁移文件
-const migrationSQL = fs.readFileSync(
-  path.join(__dirname, '../../src/db/migrations/0000_kind_hiroim.sql'),
-  'utf-8'
-);
+const migrationsDir = path.join(__dirname, '../../src/db/migrations');
 
-// 分割SQL语句
-const statements = migrationSQL
-  .split('--> statement-breakpoint')
-  .map(s => s.trim())
-  .filter(s => s.length > 0);
+function readMigrationStatements() {
+  return fs
+    .readdirSync(migrationsDir)
+    .filter(file => file.endsWith('.sql'))
+    .sort()
+    .flatMap(file => {
+      const migrationSQL = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+      return migrationSQL
+        .split('--> statement-breakpoint')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    });
+}
+
+function ensureShortcutCommandColumns(sqlite: Database.Database) {
+  const columns = new Set(
+    sqlite
+      .prepare('PRAGMA table_info(shortcut_commands)')
+      .all()
+      .map((row: any) => row.name),
+  );
+
+  if (!columns.has('description')) {
+    sqlite.exec('ALTER TABLE shortcut_commands ADD COLUMN description TEXT');
+  }
+}
 
 describe('Database Schema', () => {
   let db: ReturnType<typeof drizzle>;
@@ -26,9 +43,10 @@ describe('Database Schema', () => {
     sqlite = new Database(':memory:');
 
     // 应用迁移
-    statements.forEach(statement => {
+    readMigrationStatements().forEach(statement => {
       sqlite.exec(statement);
     });
+    ensureShortcutCommandColumns(sqlite);
 
     db = drizzle(sqlite, { schema });
   });
@@ -66,6 +84,7 @@ describe('Database Schema', () => {
     const newTemplate = await db.insert(schema.templates).values({
       name: 'test-template',
       repositoryId: repo.id,
+      repositryName: repo.name,
       path: '/templates/test',
       description: '测试模板',
       tags: ['test', 'example'],
@@ -91,6 +110,23 @@ describe('Database Schema', () => {
     expect(newConfig[0].key).toBe('test.config');
     expect(newConfig[0].value).toEqual({ theme: 'dark', language: 'zh-CN' });
     expect(newConfig[0].updatedAt).toBeDefined();
+  });
+
+  it('应该能创建shortcut_commands表并插入数据', async () => {
+    const newCommand = await db.insert(schema.shortcutCommands).values({
+      name: 'test-shortcut',
+      description: '测试快捷命令描述',
+      workspacePath: '/tmp/test-workspace',
+      script: '#!/usr/bin/env bash\necho hello',
+      scriptPath: '/tmp/test-script.sh',
+    }).returning();
+
+    expect(newCommand).toHaveLength(1);
+    expect(newCommand[0].name).toBe('test-shortcut');
+    expect(newCommand[0].description).toBe('测试快捷命令描述');
+    expect(newCommand[0].workspacePath).toBe('/tmp/test-workspace');
+    expect(newCommand[0].script).toContain('echo hello');
+    expect(newCommand[0].scriptPath).toBe('/tmp/test-script.sh');
   });
 
   it('应该能查询数据', async () => {
