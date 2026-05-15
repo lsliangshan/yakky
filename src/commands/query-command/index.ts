@@ -234,7 +234,11 @@ function printCommandList(commands: ShortcutCommandRow[]): void {
   logger.highlight(header);
   logger.muted(separator);
 
-  for (const row of rows) {
+  for (const [rowIndex, row] of rows.entries()) {
+    if (rowIndex > 0) {
+      logger.muted(separator);
+    }
+
     const rowHeight = Math.max(
       ...columns.map((column) => row[column.key].length),
     );
