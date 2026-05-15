@@ -1,17 +1,72 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { getTableConfig } from "drizzle-orm/sqlite-core";
-import Database from "better-sqlite3";
+import type BetterSqlite3 from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dataPath } from "../utils/paths.js";
 import * as schema from "./schema.js";
 
-const dbPath = dataPath("yakky.db");
-const sqlite = new Database(dbPath);
+type DatabaseConstructor = typeof import("better-sqlite3");
+type DrizzleModule = typeof import("drizzle-orm/better-sqlite3");
+type YakkyDatabase = BetterSQLite3Database<typeof schema> & {
+  $client: BetterSqlite3.Database;
+};
 
-// 创建数据库客户端
-export const db = drizzle(sqlite, { schema });
+const require = createRequire(import.meta.url);
+let sqlite: BetterSqlite3.Database | undefined;
+let dbInstance: YakkyDatabase | undefined;
+let initialized = false;
+
+function getSqlite(): BetterSqlite3.Database {
+  if (!sqlite) {
+    const Database = require("better-sqlite3") as DatabaseConstructor;
+    sqlite = new Database(dataPath("yakky.db"));
+  }
+
+  return sqlite;
+}
+
+function getDb(): YakkyDatabase {
+  if (!dbInstance) {
+    const { drizzle } = require("drizzle-orm/better-sqlite3") as DrizzleModule;
+    dbInstance = drizzle(getSqlite(), { schema });
+  }
+
+  ensureDatabase();
+  return dbInstance;
+}
+
+function ensureDatabase(): void {
+  if (initialized) return;
+
+  ensureTables();
+  applyMigrations();
+  initialized = true;
+}
+
+// 创建数据库客户端，延迟到真正访问数据库时再加载 better-sqlite3 原生绑定。
+export const db = new Proxy({} as YakkyDatabase, {
+  get(_target, prop) {
+    const database = getDb();
+    const value = Reflect.get(database, prop, database);
+    return typeof value === "function" ? value.bind(database) : value;
+  },
+  set(_target, prop, value) {
+    const database = getDb();
+    return Reflect.set(database, prop, value, database);
+  },
+  has(_target, prop) {
+    return prop in getDb();
+  },
+  ownKeys() {
+    return Reflect.ownKeys(getDb());
+  },
+  getOwnPropertyDescriptor(_target, prop) {
+    return Reflect.getOwnPropertyDescriptor(getDb(), prop);
+  },
+});
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.join(__dirname, "migrations");
@@ -122,7 +177,7 @@ function ensureTables(): void {
       }
     }
 
-    sqlite.exec(
+    getSqlite().exec(
       `CREATE TABLE IF NOT EXISTS "${tableName}" (\n  ${columnDefs.join(",\n  ")}\n);`,
     );
   }
@@ -130,12 +185,22 @@ function ensureTables(): void {
 
 // 数据库初始化函数
 export async function initializeDatabase(): Promise<typeof db> {
-  ensureTables();
-  applyMigrations();
+  ensureDatabase();
   return db;
 }
 
+export async function tryInitializeDatabase(): Promise<boolean> {
+  try {
+    ensureDatabase();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function applyMigrations(): void {
+  const sqlite = getSqlite();
+
   // 创建迁移记录表（用于追踪已执行的迁移）
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS __drizzle_migrations (

@@ -6,7 +6,7 @@ import { version } from "../package.json";
 import { getRandomSentence } from "./utils/random.js";
 import chalk from "chalk";
 import { dataPaths } from "./utils/paths.js";
-import { initializeDatabase } from "./db/index.js";
+import { tryInitializeDatabase } from "./db/index.js";
 import { mount as mountRepositry } from "./libs/repositry.js";
 import { mount as mountTemplate } from "./libs/template.js";
 import { mount as mountCreate } from "./libs/create.js";
@@ -31,8 +31,8 @@ mountSampleFile(program);
 // 主异步函数
 async function main() {
   try {
-    // 初始化数据库
-    await initializeDatabase();
+    // 首次运行时尽量完成数据库初始化；失败不影响帮助、版本等轻量命令。
+    await tryInitializeDatabase();
 
     // 解析命令行参数
     await program.parseAsync(process.argv);
