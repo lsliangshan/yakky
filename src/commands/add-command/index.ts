@@ -76,6 +76,64 @@ function quoteShellArg(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+export function getLastEmptyLineNumber(content: string): number {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  if (lines.length > 1 && lines[lines.length - 1] === "") {
+    lines.pop();
+  }
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (lines[index].trim() === "") {
+      return index + 1;
+    }
+  }
+
+  return lines.length;
+}
+
+function getEditorName(editor: string): string {
+  const commandMatch = editor.trim().match(/^"([^"]+)"|^'([^']+)'|^(\S+)/);
+  const command =
+    commandMatch?.[1] ?? commandMatch?.[2] ?? commandMatch?.[3] ?? editor;
+
+  return path.basename(command).replace(/\.exe$/i, "").toLowerCase();
+}
+
+export function buildEditorCommand(
+  editor: string,
+  filePath: string,
+  lineNumber: number,
+): string {
+  const quotedFilePath = quoteShellArg(filePath);
+  const editorName = getEditorName(editor);
+
+  if (["vi", "vim", "nvim", "view", "gvim", "mvim"].includes(editorName)) {
+    return `${editor} +${lineNumber} ${quotedFilePath}`;
+  }
+
+  if (["nano", "pico"].includes(editorName)) {
+    return `${editor} +${lineNumber},1 ${quotedFilePath}`;
+  }
+
+  if (["emacs", "emacsclient"].includes(editorName)) {
+    return `${editor} +${lineNumber}:1 ${quotedFilePath}`;
+  }
+
+  if (
+    ["code", "code-insiders", "codium", "cursor", "windsurf"].includes(
+      editorName,
+    )
+  ) {
+    return `${editor} --goto ${quoteShellArg(`${filePath}:${lineNumber}:1`)}`;
+  }
+
+  if (["subl", "zed"].includes(editorName)) {
+    return `${editor} ${quoteShellArg(`${filePath}:${lineNumber}:1`)}`;
+  }
+
+  return `${editor} ${quotedFilePath}`;
+}
+
 function persistEditedScript(script: string): string {
   const scriptPath = dataPath("data", `${randomUUID()}.sh`);
   fs.writeFileSync(scriptPath, script, "utf-8");
@@ -94,15 +152,23 @@ function readScriptFromEditor(): {
   const editor = process.env.VISUAL || process.env.EDITOR || "vi";
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "yakky-add-command-"));
   const tempFile = path.join(tempDir, "script.sh");
+  const initialScript = "#!/usr/bin/env bash\n\n";
 
-  fs.writeFileSync(tempFile, "#!/usr/bin/env bash\n\n", "utf-8");
+  fs.writeFileSync(tempFile, initialScript, "utf-8");
   logger.info(`正在使用 ${editor} 编辑快捷命令脚本...`);
 
   try {
-    const result = spawnSync(`${editor} ${quoteShellArg(tempFile)}`, {
-      shell: true,
-      stdio: "inherit",
-    });
+    const result = spawnSync(
+      buildEditorCommand(
+        editor,
+        tempFile,
+        getLastEmptyLineNumber(initialScript),
+      ),
+      {
+        shell: true,
+        stdio: "inherit",
+      },
+    );
 
     if (result.error) {
       throw result.error;

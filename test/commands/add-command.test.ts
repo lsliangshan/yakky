@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildEditorCommand,
+  getLastEmptyLineNumber,
   isShortcutCommandScopeConflict,
   validateShortcutCommandName,
 } from '../../src/commands/add-command/index.js';
@@ -40,4 +42,26 @@ describe('add command name validation', () => {
       expect(validateShortcutCommandName(name)).not.toBe(true);
     },
   );
+});
+
+describe('add command editor cursor', () => {
+  it('定位到初始化脚本的最后一个空行', () => {
+    expect(getLastEmptyLineNumber('#!/usr/bin/env bash\n\n')).toBe(2);
+  });
+
+  it('为 vi 编辑器添加行号参数', () => {
+    expect(buildEditorCommand('vi', '/tmp/script.sh', 2)).toBe("vi +2 '/tmp/script.sh'");
+  });
+
+  it('保留编辑器已有参数并添加跳转位置', () => {
+    expect(buildEditorCommand('code --wait', '/tmp/script.sh', 2)).toBe(
+      "code --wait --goto '/tmp/script.sh:2:1'",
+    );
+  });
+
+  it('无法识别编辑器时保持原打开方式', () => {
+    expect(buildEditorCommand('custom-editor', '/tmp/script.sh', 2)).toBe(
+      "custom-editor '/tmp/script.sh'",
+    );
+  });
 });
