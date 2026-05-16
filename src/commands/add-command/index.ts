@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import Enquirer from "enquirer";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import chalk from "chalk";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,9 +10,12 @@ import { db } from "../../db/index.js";
 import { shortcutCommands } from "../../db/schema.js";
 import { logger } from "../../utils/logger.js";
 import { dataPath } from "../../utils/paths.js";
+import { decryptShortcutCommandConfig } from "../share-command/index.js";
+import type { ShortcutCommandShareConfig } from "../share-command/types.js";
 import type { AddCommandArgs } from "./types.js";
 
 type WorkspaceChoice = "global" | "cwd" | "manual";
+type TokenValue = string | boolean | undefined;
 
 const shortcutCommandNamePattern =
   /^[\p{Script=Han}A-Za-z][\p{Script=Han}A-Za-z0-9_-]*$/u;
@@ -22,6 +26,13 @@ export class ShortcutCommandExistsError extends Error {
   constructor(public readonly workspacePath: string | null) {
     super("快捷命令已经存在");
     this.name = "ShortcutCommandExistsError";
+  }
+}
+
+export class ShortcutCommandTokenNotFoundError extends Error {
+  constructor() {
+    super("命令不存在");
+    this.name = "ShortcutCommandTokenNotFoundError";
   }
 }
 
@@ -61,6 +72,45 @@ function assertReadableFile(filePath: string): void {
   }
 }
 
+function hasOwn(value: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+export function normalizeShortcutCommandShareConfig(
+  value: unknown,
+): ShortcutCommandShareConfig | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  if (
+    !hasOwn(value, "name") ||
+    !hasOwn(value, "description") ||
+    !hasOwn(value, "workspace_path") ||
+    !hasOwn(value, "script")
+  ) {
+    return null;
+  }
+
+  const config = value as Record<string, unknown>;
+  if (
+    typeof config.name !== "string" ||
+    (config.description !== null && typeof config.description !== "string") ||
+    (config.workspace_path !== null &&
+      typeof config.workspace_path !== "string") ||
+    typeof config.script !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    name: config.name,
+    description: config.description,
+    workspace_path: config.workspace_path,
+    script: config.script,
+  };
+}
+
 export function isShortcutCommandScopeConflict(
   existingWorkspacePath: string | null,
   requestedWorkspacePath: string | null,
@@ -96,7 +146,10 @@ function getEditorName(editor: string): string {
   const command =
     commandMatch?.[1] ?? commandMatch?.[2] ?? commandMatch?.[3] ?? editor;
 
-  return path.basename(command).replace(/\.exe$/i, "").toLowerCase();
+  return path
+    .basename(command)
+    .replace(/\.exe$/i, "")
+    .toLowerCase();
 }
 
 export function buildEditorCommand(
@@ -134,7 +187,7 @@ export function buildEditorCommand(
   return `${editor} ${quotedFilePath}`;
 }
 
-function persistEditedScript(script: string): string {
+export function persistEditedScript(script: string): string {
   const scriptPath = dataPath("data", `${randomUUID()}.sh`);
   fs.writeFileSync(scriptPath, script, "utf-8");
   fs.chmodSync(scriptPath, 0o700);
@@ -146,7 +199,9 @@ function readScriptFromEditor(): {
   scriptPath: string;
 } {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    throw new Error("当前终端无法打开编辑器，请使用 -f/--file 指定 bash 脚本文件");
+    throw new Error(
+      "当前终端无法打开编辑器，请使用 -f/--file 指定 bash 脚本文件",
+    );
   }
 
   const editor = process.env.VISUAL || process.env.EDITOR || "vi";
@@ -244,7 +299,8 @@ async function askWorkspace(workspace?: string): Promise<string | null> {
 
       const resolved = resolveDirectory(cleaned);
       if (!fs.existsSync(resolved)) return `路径不存在: ${resolved}`;
-      if (!fs.statSync(resolved).isDirectory()) return `路径不是目录: ${resolved}`;
+      if (!fs.statSync(resolved).isDirectory())
+        return `路径不是目录: ${resolved}`;
       return true;
     },
   });
@@ -269,6 +325,112 @@ async function askDescription(description?: string): Promise<string | null> {
 
   const cleaned = answer.description.trim();
   return cleaned || null;
+}
+
+async function askToken(token: TokenValue): Promise<string> {
+  if (token !== undefined && token !== true) {
+    const cleaned = String(token).trim();
+    if (cleaned) return cleaned;
+  }
+
+  const answer = await Enquirer.prompt<{ token: string }>({
+    type: "input",
+    name: "token",
+    message: "请输入分享命令密文",
+    validate: (value: string) => (value.trim() ? true : "密文不能为空"),
+  });
+
+  return answer.token.trim();
+}
+
+function readConfigFromToken(token: string): ShortcutCommandShareConfig {
+  try {
+    const config = normalizeShortcutCommandShareConfig(
+      decryptShortcutCommandConfig(token),
+    );
+
+    if (!config) {
+      throw new ShortcutCommandTokenNotFoundError();
+    }
+
+    return config;
+  } catch {
+    throw new ShortcutCommandTokenNotFoundError();
+  }
+}
+
+async function askTokenName(defaultName: string): Promise<string> {
+  const answer = await Enquirer.prompt<{ name: string }>({
+    type: "input",
+    name: "name",
+    message: "请输入快捷命令名称",
+    initial: defaultName,
+    validate: validateShortcutCommandName,
+  });
+
+  return answer.name;
+}
+
+async function askTokenWorkspace(
+  defaultWorkspacePath: string | null,
+): Promise<string | null> {
+  const answer = await Enquirer.prompt<{ workspacePath: string }>({
+    type: "input",
+    name: "workspacePath",
+    message: "请输入工作区系统路径（留空表示全系统生效）",
+    initial: defaultWorkspacePath ?? "",
+    validate: (value: string) => {
+      const cleaned = value.trim();
+      if (!cleaned) return true;
+
+      const resolved = resolveDirectory(cleaned);
+      if (!fs.existsSync(resolved)) return `路径不存在: ${resolved}`;
+      if (!fs.statSync(resolved).isDirectory())
+        return `路径不是目录: ${resolved}`;
+      return true;
+    },
+  });
+
+  const cleaned = answer.workspacePath.trim();
+  if (!cleaned) return null;
+
+  return resolveDirectory(cleaned);
+}
+
+export function normalizeCommandDescription(
+  description: string | null | undefined,
+): string | null {
+  const cleaned = description?.trim() ?? "";
+  return cleaned || null;
+}
+
+async function askTokenDescription(
+  defaultDescription: string | null,
+): Promise<string | null> {
+  const answer = await Enquirer.prompt<{ description: string }>({
+    type: "input",
+    name: "description",
+    message: "请输入命令描述（可选）",
+    initial: defaultDescription ?? "",
+  });
+
+  return normalizeCommandDescription(answer.description);
+}
+
+function printTokenScript(script: string): void {
+  logger.log(chalk.cyan("\n  ╭─ 脚本内容"));
+  logger.log(chalk.cyan("  │ "));
+
+  for (const line of script.split(/\r?\n/)) {
+    logger.log(formatTokenScriptLine(line));
+  }
+
+  logger.log(chalk.cyan("  │ "));
+  logger.log(chalk.cyan("  ╰─ 脚本内容\n"));
+}
+
+export function formatTokenScriptLine(line: string): string {
+  return `${chalk.cyan("  │  ")}${chalk.white(line)}`;
 }
 
 async function askScript(file?: string): Promise<{
@@ -307,6 +469,41 @@ async function ensureCommandDoesNotExist(
 }
 
 export async function addCommand(args?: AddCommandArgs) {
+  if (args?.token !== undefined) {
+    const token = await askToken(args.token);
+    const config = readConfigFromToken(token);
+    const name = await askTokenName(config.name);
+    const workspacePath = await askTokenWorkspace(config.workspace_path);
+    const description = await askTokenDescription(config.description);
+    await ensureCommandDoesNotExist(name, workspacePath);
+
+    printTokenScript(config.script);
+
+    const scriptPath = persistEditedScript(config.script);
+    const [created] = await db
+      .insert(shortcutCommands)
+      .values({
+        name,
+        description,
+        workspacePath,
+        script: config.script,
+        scriptPath,
+      })
+      .returning();
+
+    logger.success(`快捷命令已创建: ${created.name}`);
+    logger.highlight(`  ID: ${created.id}`);
+    logger.highlight(`  生效范围: ${created.workspacePath ?? "全系统"}`);
+    if (created.description) {
+      logger.highlight(`  描述: ${created.description}`);
+    }
+    if (created.scriptPath) {
+      logger.highlight(`  脚本来源: ${created.scriptPath}`);
+    }
+
+    return created;
+  }
+
   const name = await askName(args?.name);
   const workspacePath = await askWorkspace(args?.workspace);
   await ensureCommandDoesNotExist(name, workspacePath);
@@ -327,9 +524,7 @@ export async function addCommand(args?: AddCommandArgs) {
 
   logger.success(`快捷命令已创建: ${created.name}`);
   logger.highlight(`  ID: ${created.id}`);
-  logger.highlight(
-    `  生效范围: ${created.workspacePath ?? "全系统"}`,
-  );
+  logger.highlight(`  生效范围: ${created.workspacePath ?? "全系统"}`);
   if (created.description) {
     logger.highlight(`  描述: ${created.description}`);
   }

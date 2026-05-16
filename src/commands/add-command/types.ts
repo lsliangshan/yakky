@@ -3,4 +3,5 @@ export interface AddCommandArgs {
   description?: string;
   workspace?: string;
   file?: string;
+  token?: string | boolean;
 }

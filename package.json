@@ -9,9 +9,18 @@
   "bin": {
     "yakky": "./dist/cli.js",
     "yak": "./dist/cli.js",
-    "执行": "./dist/cli.js",
     "添加命令": "./dist/add-command-cli.js",
-    "查询命令": "./dist/query-command-cli.js"
+    "add": "./dist/add-command-cli.js",
+    "查询命令": "./dist/query-command-cli.js",
+    "query": "./dist/query-command-cli.js",
+    "运行命令": "./dist/run-command-cli.js",
+    "run": "./dist/run-command-cli.js",
+    "分享命令": "./dist/share-command-cli.js",
+    "share": "./dist/share-command-cli.js",
+    "删除命令": "./dist/delete-command-cli.js",
+    "delete": "./dist/delete-command-cli.js",
+    "修改命令": "./dist/edit-command-cli.js",
+    "edit": "./dist/edit-command-cli.js"
   },
   "exports": {
     ".": {
@@ -53,6 +62,7 @@
     "better-sqlite3": "^12.9.0",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
+    "crypto-js": "^4.2.0",
     "drizzle-orm": "^0.45.2",
     "enquirer": "^2.4.1",
     "env-paths": "^4.0.0",

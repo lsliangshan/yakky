@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildEditorCommand,
+  formatTokenScriptLine,
   getLastEmptyLineNumber,
   isShortcutCommandScopeConflict,
+  normalizeCommandDescription,
+  normalizeShortcutCommandShareConfig,
   validateShortcutCommandName,
 } from '../../src/commands/add-command/index.js';
 
@@ -63,5 +66,72 @@ describe('add command editor cursor', () => {
     expect(buildEditorCommand('custom-editor', '/tmp/script.sh', 2)).toBe(
       "custom-editor '/tmp/script.sh'",
     );
+  });
+});
+
+describe('add command token config validation', () => {
+  it('接受包含 name/description/workspace_path/script 的分享配置', () => {
+    expect(
+      normalizeShortcutCommandShareConfig({
+        name: 'deploy',
+        description: '发布当前服务',
+        workspace_path: '/work/app',
+        script: 'echo deploy',
+      }),
+    ).toEqual({
+      name: 'deploy',
+      description: '发布当前服务',
+      workspace_path: '/work/app',
+      script: 'echo deploy',
+    });
+  });
+
+  it('缺少必需字段时拒绝分享配置', () => {
+    expect(
+      normalizeShortcutCommandShareConfig({
+        name: 'deploy',
+        description: '发布当前服务',
+        script: 'echo deploy',
+      }),
+    ).toBeNull();
+  });
+
+  it('字段类型不正确时拒绝分享配置', () => {
+    expect(
+      normalizeShortcutCommandShareConfig({
+        name: 'deploy',
+        description: null,
+        workspace_path: null,
+        script: 123,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('add command token script preview', () => {
+  it('脚本内容使用运行命令输出块的边线样式', () => {
+    const output = formatTokenScriptLine('echo deploy');
+
+    expect(output).toContain('│');
+    expect(output).toContain('echo deploy');
+  });
+});
+
+describe('add command description normalization', () => {
+  it('保留非空描述并去掉首尾空白', () => {
+    expect(normalizeCommandDescription('  发布当前服务  ')).toBe('发布当前服务');
+  });
+
+  it('空描述保存为 null', () => {
+    expect(normalizeCommandDescription('   ')).toBeNull();
+    expect(normalizeCommandDescription(null)).toBeNull();
+  });
+});
+
+describe('add command token duplicate rule', () => {
+  it('token 导入沿用直接添加命令的同名同范围冲突规则', () => {
+    expect(isShortcutCommandScopeConflict('/work/app', '/work/app')).toBe(true);
+    expect(isShortcutCommandScopeConflict(null, '/work/app')).toBe(true);
+    expect(isShortcutCommandScopeConflict('/work/app', '/work/app/sub')).toBe(false);
   });
 });
