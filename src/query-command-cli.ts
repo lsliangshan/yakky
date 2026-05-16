@@ -12,11 +12,15 @@ dataPaths.ensure();
 const program = new Command();
 
 program
-  .name("查询命令")
+  .name("query")
+  .alias("查询命令")
   .description("查询快捷命令")
   .version(version, "-v, --version", "显示版本号")
   .helpOption("-h, --help", "显示帮助信息")
-  .option("-w, --workspace <path>", "查询指定工作区内生效的快捷命令；留空表示查询全部")
+  .option(
+    "-w, --workspace <path>",
+    "查询指定工作区内生效的快捷命令；留空表示查询全部",
+  )
   .action(async (args) => {
     await queryCommand(args);
   });

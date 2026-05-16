@@ -2,9 +2,7 @@
 
 import { Command } from "commander";
 import { version } from "../package.json";
-import {
-  ShortcutCommandExistsError,
-} from "./commands/add-command/index.js";
+import { ShortcutCommandExistsError } from "./commands/add-command/index.js";
 import { editCommand } from "./commands/edit-command/index.js";
 import { tryInitializeDatabase } from "./db/index.js";
 import { dataPaths } from "./utils/paths.js";
@@ -15,7 +13,8 @@ dataPaths.ensure();
 const program = new Command();
 
 program
-  .name("修改命令")
+  .name("edit")
+  .alias("修改命令")
   .description("修改快捷命令")
   .version(version, "-v, --version", "显示版本号")
   .helpOption("-h, --help", "显示帮助信息")

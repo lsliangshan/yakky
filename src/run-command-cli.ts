@@ -12,11 +12,15 @@ dataPaths.ensure();
 const program = new Command();
 
 program
-  .name("运行命令")
+  .name("run")
+  .alias("运行命令")
   .description("运行当前工作区可用的快捷命令")
   .version(version, "-v, --version", "显示版本号")
   .helpOption("-h, --help", "显示帮助信息")
-  .option("-w, --workspace <path>", "运行指定工作区内生效的快捷命令；默认使用当前工作区")
+  .option(
+    "-w, --workspace <path>",
+    "运行指定工作区内生效的快捷命令；默认使用当前工作区",
+  )
   .action(async (args) => {
     await runCommand(args);
   });

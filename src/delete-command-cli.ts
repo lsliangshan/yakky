@@ -12,7 +12,8 @@ dataPaths.ensure();
 const program = new Command();
 
 program
-  .name("删除命令")
+  .name("delete")
+  .alias("删除命令")
   .description("删除快捷命令")
   .version(version, "-v, --version", "显示版本号")
   .helpOption("-h, --help", "显示帮助信息")

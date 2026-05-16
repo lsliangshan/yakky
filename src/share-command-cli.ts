@@ -12,7 +12,8 @@ dataPaths.ensure();
 const program = new Command();
 
 program
-  .name("分享命令")
+  .name("share")
+  .alias("分享命令")
   .description("分享快捷命令的加密配置")
   .version(version, "-v, --version", "显示版本号")
   .helpOption("-h, --help", "显示帮助信息")
