@@ -16,7 +16,11 @@ import {
   ShortcutCommandExistsError,
   validateShortcutCommandName,
 } from "../add-command/index.js";
-import { formatCommandManageChoice } from "../delete-command/index.js";
+import {
+  findCommandsByName,
+  formatCommandManageChoice,
+  formatSelectedCommand,
+} from "../delete-command/index.js";
 import type { EditCommandArgs } from "./types.js";
 
 type ShortcutCommandRow = typeof shortcutCommands.$inferSelect;
@@ -53,6 +57,23 @@ async function askCommandToEdit(
   }
 
   return selected;
+}
+
+function printSelectedCommand(command: ShortcutCommandRow): void {
+  for (const line of formatSelectedCommand(command)) {
+    logger.highlight(line);
+  }
+}
+
+async function resolveCommandByName(
+  commands: ShortcutCommandRow[],
+  name: string,
+): Promise<ShortcutCommandRow | null> {
+  const matched = findCommandsByName(commands, name);
+  if (matched.length === 0) return null;
+  if (matched.length === 1) return matched[0];
+
+  return askCommandToEdit(matched);
 }
 
 async function askCommandName(defaultName: string): Promise<string> {
@@ -187,11 +208,23 @@ async function ensureEditableCommandDoesNotExist(
   }
 }
 
-export async function editCommand(_args?: EditCommandArgs) {
+export async function editCommand(args?: EditCommandArgs) {
   const commands = await getAllCommands();
+  const requestedName = args?.name?.trim();
 
   logger.highlight("可修改快捷命令");
   logger.muted(`  快捷命令数量: ${commands.length}`);
+
+  if (requestedName) {
+    const selected = await resolveCommandByName(commands, requestedName);
+    if (!selected) {
+      logger.info(`不存在快捷命令“${requestedName}”`);
+      return null;
+    }
+
+    printSelectedCommand(selected);
+    return editSelectedCommand(selected);
+  }
 
   if (commands.length === 0) {
     logger.info("还没有快捷命令");
@@ -199,6 +232,11 @@ export async function editCommand(_args?: EditCommandArgs) {
   }
 
   const selected = await askCommandToEdit(commands);
+  printSelectedCommand(selected);
+  return editSelectedCommand(selected);
+}
+
+async function editSelectedCommand(selected: ShortcutCommandRow) {
   const name = await askCommandName(selected.name);
   const workspacePath = await askWorkspacePath(selected.workspacePath);
   const description = await askDescription(selected.description);

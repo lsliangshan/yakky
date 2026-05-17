@@ -1,12 +1,11 @@
 import Enquirer from "enquirer";
 import { asc } from "drizzle-orm";
 import { spawn } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
 import { db } from "../../db/index.js";
 import { shortcutCommands } from "../../db/schema.js";
 import { logger } from "../../utils/logger.js";
 import { isWorkspaceCommandEffective } from "../query-command/index.js";
+import { formatCommandWorkspaceScope } from "../query-command/index.js";
 import type { RunCommandArgs } from "./types.js";
 import chalk from "chalk";
 
@@ -16,31 +15,6 @@ type CommandOutputStream = "stdout" | "stderr";
 type CommandOutputState = {
   pending: string;
 };
-
-function resolveDirectory(input: string): string {
-  return path.resolve(input.trim());
-}
-
-function assertDirectory(dirPath: string): void {
-  if (!fs.existsSync(dirPath)) {
-    throw new Error(`工作区路径不存在: ${dirPath}`);
-  }
-
-  if (!fs.statSync(dirPath).isDirectory()) {
-    throw new Error(`工作区路径不是目录: ${dirPath}`);
-  }
-}
-
-function resolveWorkspace(workspace?: string): string {
-  if (workspace === undefined) return process.cwd();
-
-  const cleaned = workspace.trim();
-  if (!cleaned) return process.cwd();
-
-  const resolved = resolveDirectory(cleaned);
-  assertDirectory(resolved);
-  return resolved;
-}
 
 export function getAvailableCommandsForWorkspace(
   commands: ShortcutCommandRow[],
@@ -75,6 +49,36 @@ async function getAvailableCommands(
     .orderBy(asc(shortcutCommands.name), asc(shortcutCommands.workspacePath));
 
   return getAvailableCommandsForWorkspace(commands, workspacePath);
+}
+
+async function getAllCommands(): Promise<ShortcutCommandRow[]> {
+  return db
+    .select()
+    .from(shortcutCommands)
+    .orderBy(asc(shortcutCommands.name), asc(shortcutCommands.workspacePath));
+}
+
+export function findCommandsByName(
+  commands: ShortcutCommandRow[],
+  name: string,
+): ShortcutCommandRow[] {
+  return commands.filter((command) => command.name === name);
+}
+
+function printSelectedCommand(command: ShortcutCommandRow): void {
+  logger.highlight(`  快捷命令: ${command.name}`);
+  logger.highlight(`  工作区路径: ${formatCommandWorkspaceScope(command.workspacePath)}`);
+}
+
+async function resolveCommandByName(
+  commands: ShortcutCommandRow[],
+  name: string,
+): Promise<ShortcutCommandRow | null> {
+  const matched = findCommandsByName(commands, name);
+  if (matched.length === 0) return null;
+  if (matched.length === 1) return matched[0];
+
+  return askCommandToRun(matched);
 }
 
 async function askCommandToRun(
@@ -184,7 +188,24 @@ async function runShortcutCommand(
 }
 
 export async function runCommand(args?: RunCommandArgs) {
-  const workspacePath = resolveWorkspace(args?.workspace);
+  const workspacePath = process.cwd();
+  const requestedName = args?.name?.trim();
+
+  if (requestedName) {
+    const selected = await resolveCommandByName(
+      await getAllCommands(),
+      requestedName,
+    );
+    if (!selected) {
+      logger.info(`不存在快捷命令“${requestedName}”`);
+      return null;
+    }
+
+    printSelectedCommand(selected);
+    await runShortcutCommand(selected, workspacePath);
+    return selected;
+  }
+
   const commands = await getAvailableCommands(workspacePath);
 
   logger.muted(
@@ -202,6 +223,7 @@ export async function runCommand(args?: RunCommandArgs) {
   // }
 
   const selected = await askCommandToRun(commands);
+  printSelectedCommand(selected);
   await runShortcutCommand(selected, workspacePath);
   return selected;
 }

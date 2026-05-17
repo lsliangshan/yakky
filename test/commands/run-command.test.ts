@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  findCommandsByName,
   formatCommandOutputLine,
   formatRunCommandChoice,
   getAvailableCommandsForWorkspace,
@@ -64,6 +65,40 @@ describe('run command choice formatting', () => {
     expect(formatRunCommandChoice(command({ name: 'deploy' }))).toBe(
       'deploy - 无描述',
     );
+  });
+});
+
+describe('run command name lookup', () => {
+  it('按快捷命令名称查找命令', () => {
+    const commands = [
+      command({ id: 1, name: 'build', workspacePath: null }),
+      command({ id: 2, name: '测试', workspacePath: '/work/current' }),
+    ];
+
+    expect(findCommandsByName(commands, '测试').map(item => item.id)).toEqual([
+      2,
+    ]);
+  });
+
+  it('同名命令存在时返回全部同名项', () => {
+    const commands = [
+      command({ id: 1, name: '测试', workspacePath: null }),
+      command({ id: 2, name: '测试', workspacePath: '/work/current' }),
+    ];
+
+    expect(findCommandsByName(commands, '测试').map(item => item.id)).toEqual([
+      1,
+      2,
+    ]);
+  });
+
+  it('找不到名称时返回空数组', () => {
+    expect(
+      findCommandsByName(
+        [command({ id: 1, name: 'build', workspacePath: null })],
+        '测试',
+      ),
+    ).toEqual([]);
   });
 });
 

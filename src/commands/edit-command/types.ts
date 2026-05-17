@@ -1,1 +1,3 @@
-export interface EditCommandArgs {}
+export interface EditCommandArgs {
+  name?: string;
+}

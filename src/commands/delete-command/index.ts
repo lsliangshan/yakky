@@ -13,6 +13,26 @@ export function formatCommandManageChoice(command: ShortcutCommandRow): string {
   return `${command.name} - ${description} - ${formatCommandWorkspaceScope(command.workspacePath)}`;
 }
 
+export function findCommandsByName(
+  commands: ShortcutCommandRow[],
+  name: string,
+): ShortcutCommandRow[] {
+  return commands.filter((command) => command.name === name);
+}
+
+export function formatSelectedCommand(command: ShortcutCommandRow): string[] {
+  return [
+    `  快捷命令: ${command.name}`,
+    `  工作区路径: ${formatCommandWorkspaceScope(command.workspacePath)}`,
+  ];
+}
+
+function printSelectedCommand(command: ShortcutCommandRow): void {
+  for (const line of formatSelectedCommand(command)) {
+    logger.highlight(line);
+  }
+}
+
 async function getAllCommands(): Promise<ShortcutCommandRow[]> {
   return db
     .select()
@@ -43,11 +63,42 @@ async function askCommandToDelete(
   return selected;
 }
 
-export async function deleteCommand(_args?: DeleteCommandArgs) {
+async function resolveCommandByName(
+  commands: ShortcutCommandRow[],
+  name: string,
+): Promise<ShortcutCommandRow | null> {
+  const matched = findCommandsByName(commands, name);
+  if (matched.length === 0) return null;
+  if (matched.length === 1) return matched[0];
+
+  return askCommandToDelete(matched);
+}
+
+export async function deleteCommand(args?: DeleteCommandArgs) {
   const commands = await getAllCommands();
+  const requestedName = args?.name?.trim();
 
   logger.highlight("可删除快捷命令");
   logger.muted(`  快捷命令数量: ${commands.length}`);
+
+  if (requestedName) {
+    const selected = await resolveCommandByName(commands, requestedName);
+    if (!selected) {
+      logger.info(`不存在快捷命令“${requestedName}”`);
+      return null;
+    }
+
+    printSelectedCommand(selected);
+    await db.delete(shortcutCommands).where(eq(shortcutCommands.id, selected.id));
+
+    logger.success(`快捷命令已删除: ${selected.name}`);
+    logger.highlight(`  ID: ${selected.id}`);
+    logger.highlight(
+      `  生效范围: ${selected.workspacePath ?? "全系统"}`,
+    );
+
+    return selected;
+  }
 
   if (commands.length === 0) {
     logger.info("还没有快捷命令");
@@ -55,6 +106,7 @@ export async function deleteCommand(_args?: DeleteCommandArgs) {
   }
 
   const selected = await askCommandToDelete(commands);
+  printSelectedCommand(selected);
   await db.delete(shortcutCommands).where(eq(shortcutCommands.id, selected.id));
 
   logger.success(`快捷命令已删除: ${selected.name}`);

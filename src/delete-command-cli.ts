@@ -17,8 +17,9 @@ program
   .description("删除快捷命令")
   .version(version, "-v, --version", "显示版本号")
   .helpOption("-h, --help", "显示帮助信息")
-  .action(async (args) => {
-    await deleteCommand(args);
+  .argument("[name]", "快捷命令名称")
+  .action(async (name) => {
+    await deleteCommand({ name });
   });
 
 async function main() {

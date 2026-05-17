@@ -1,3 +1,3 @@
 export interface RunCommandArgs {
-  workspace?: string;
+  name?: string;
 }

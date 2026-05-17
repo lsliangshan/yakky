@@ -1,1 +1,3 @@
-export interface DeleteCommandArgs {}
+export interface DeleteCommandArgs {
+  name?: string;
+}
