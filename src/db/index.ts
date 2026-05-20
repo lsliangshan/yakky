@@ -19,10 +19,33 @@ let sqlite: BetterSqlite3.Database | undefined;
 let dbInstance: YakkyDatabase | undefined;
 let initialized = false;
 
+export function formatBetterSqliteInstallError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    !message.includes("Could not locate the bindings file") &&
+    !message.includes("better_sqlite3.node")
+  ) {
+    return error instanceof Error ? error : new Error(message);
+  }
+
+  return new Error(
+    [
+      "better-sqlite3 原生模块未构建成功，无法打开本地数据库。",
+      "请在安装 yakky 的同一 Node/pnpm 环境中执行：pnpm rebuild -g better-sqlite3",
+      "如果 pnpm 提示 ignored build scripts，请重新安装：pnpm add -g --allow-build=better-sqlite3 yakky",
+      `原始错误: ${message}`,
+    ].join("\n  "),
+  );
+}
+
 function getSqlite(): BetterSqlite3.Database {
   if (!sqlite) {
-    const Database = require("better-sqlite3") as DatabaseConstructor;
-    sqlite = new Database(dataPath("yakky.db"));
+    try {
+      const Database = require("better-sqlite3") as DatabaseConstructor;
+      sqlite = new Database(dataPath("yakky.db"));
+    } catch (error) {
+      throw formatBetterSqliteInstallError(error);
+    }
   }
 
   return sqlite;
