@@ -1,6 +1,6 @@
 {
   "name": "yakky",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Your talkative CLI sidekick that never runs out of questions.",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,7 +24,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "scripts/postinstall.cjs"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -33,6 +34,7 @@
     "build": "tsup && npm run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "dev": "tsup --watch",
+    "postinstall": "node scripts/postinstall.cjs",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
