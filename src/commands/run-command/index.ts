@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { db } from "../../db/index.js";
 import { shortcutCommands } from "../../db/schema.js";
 import { logger } from "../../utils/logger.js";
+import { notifyUserWhenCommandWindowHidden } from "../../utils/notify.js";
 import { isWorkspaceCommandEffective } from "../query-command/index.js";
 import { formatCommandWorkspaceScope } from "../query-command/index.js";
 import type { RunCommandArgs } from "./types.js";
@@ -138,6 +139,21 @@ function flushCommandOutput(
   state.pending = "";
 }
 
+async function notifyShortcutCommandResult(
+  command: ShortcutCommandRow,
+  status: "success" | "failure",
+  reason?: string,
+): Promise<void> {
+  const isSuccess = status === "success";
+
+  await notifyUserWhenCommandWindowHidden({
+    title: isSuccess ? "Yakky: 快捷命令完成" : "Yakky: 快捷命令失败",
+    content: isSuccess
+      ? `快捷命令「${command.name}」运行成功`
+      : `快捷命令「${command.name}」运行失败${reason ? `: ${reason}` : ""}`,
+  });
+}
+
 async function runShortcutCommand(
   command: ShortcutCommandRow,
   cwd: string,
@@ -179,12 +195,16 @@ async function runShortcutCommand(
   });
 
   if (result.signal) {
+    await notifyShortcutCommandResult(command, "failure", `信号 ${result.signal}`);
     throw new Error(`快捷命令被信号终止: ${result.signal}`);
   }
 
   if (result.status !== 0) {
+    await notifyShortcutCommandResult(command, "failure", `状态码 ${result.status}`);
     throw new Error(`快捷命令执行失败，状态码: ${result.status}`);
   }
+
+  await notifyShortcutCommandResult(command, "success");
 }
 
 export async function runCommand(args?: RunCommandArgs) {
