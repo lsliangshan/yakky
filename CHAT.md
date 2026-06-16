@@ -82,3 +82,15 @@
 9. type == 'dir' 时，调用 src/utils/ftp.ts 中的 uploadDirToFtp 方法；type == 'file' 时，调用 src/utils/ftp.ts 中的 uploadFileToFtp 方法.
 10. 以上必填选项，如果没有值，就直接结束命令并返回错误。
 ```
+
+```
+提供一个 bash 脚本 ，主要功能是
+1. cd 到当前目录下的 docs 目录中，后续所有操作都在当前目录
+2. 获取当前目录下的 package.json 的json，
+2.1 如果 version 字段的值不是 v1.v2.v3-docs.v4 这种形式（v1, v2, v3, v4 均为数字），则将 version的值改为 v1.v2.v3-docs.1，如：2.1.3-rc.2 改为 2.1.3-docs.1
+2.2 如果 version 字段的值是 v1.v2.v3-docs.v4 这种形式（v1, v2, v3, v4 均为数字），则将 version的值改为 v1.v2.v3-docs.[v4+1]，如：2.1.3-docs.1 改为 2.1.3-docs.2
+3. 执行命令：`npm run docs:build`。
+4. 检查当前目录下 是否存在 .vitepress/dist 目录，
+4.1 如果不存在，则提示错误
+4.2 如果存在，则将 .vitepress/dist 目录 上传到远程 FTP 服务器，可以使用命令 `yakky upload-ftp -t dir -h 192.168.11.108 -u team.mobile -p QuuVoov6ooChie -l [.vitepress/dist 的绝对路径] -r /docs/use-services/v2`
+```
