@@ -18,5 +18,5 @@ export default defineConfig({
   clean: true,
   minify: false,
   shims: true,
-  external: ['basic-ftp'],
+  external: ['basic-ftp', 'ssh2'],
 });

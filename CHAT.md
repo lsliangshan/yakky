@@ -94,3 +94,38 @@
 4.1 如果不存在，则提示错误
 4.2 如果存在，则将 .vitepress/dist 目录 上传到远程 FTP 服务器，可以使用命令 `yakky upload-ftp -t dir -h 192.168.11.108 -u team.mobile -p QuuVoov6ooChie -l [.vitepress/dist 的绝对路径] -r /docs/use-services/v2`
 ```
+
+```
+添加 yak tunnel 命令，功能是将本地服务，通过内网穿透到远端服务器。文件目录实现与 yak repositry 一致。支持以下选项
+1. -u/--url 本地服务的地址，带端口号。如: http://127.0.0.1:3000
+2. -s/--server 服务器端
+```
+
+```
+提供一个 bash 脚本 ，主要功能是
+1. 判断当前目录下，是否包含 dist 目录，如果包含，则删除 dist 目录，执行完后，进入下一步
+2. 先执行 `npm run build` 命令，执行完后，进入下一步
+3. 检查当前目录下是否包含 dist
+3.1 如果不包含 dist 目录，表示项目打包失败，提示用户失败，中止bash继续执行。
+3.2 如果包含 dist 目录，则将 dist 目录压缩成 ZIP 包，执行完后，进入下一步
+4. 执行命令 `yak set-sshkey -h 82.157.53.203 -u root -p *#Liangshan123*#`，如果命令提示 "该服务器已配置过免密登录" 也继续往下执行 bash.
+5. 上传 ZIP 包至远程服务器，执行命令 `scp dist.zip root@82.157.53.203:/mnt/api.smlrt.com`，执行完后，进入下一步
+6. 执行命令 `ssh root@82.157.53.203 "cd /mnt/api.smlrt.com && rm -rf dist && unzip dist.zip && pm2 restart smlrtapi"`
+```
+
+```
+添加 yak set-sshkey 命令，功能是本地生成一个密钥，并将公钥上传至服务器，主要目的是能免密连接 远程服务器。文件目录实现与 yak repositry 一致。支持以下选项
+1. -h/--host 远程服务器地址，必填
+2. -u/--user 远程服务器的登录用户名，必填
+3. -p/--password 远程服务器的登录密码，必填
+4. --port 远程服务器的连接端口，选填，默认 `22`
+5. 本命令 --help 不再使用 `-h` 短选项。
+6. 如果用户没有默认提供选项址，需要使用 enquirer 提供交互式提问，来搜集选项的值
+7. 所有选项搜集完成后，调用 src/utils/setup-ssh-key.ts 中的 setupSshKeyLogin 方法。
+```
+
+```
+需要为 yak set-sshkey 命令添加一个数据表，用于存储已经添加过的 sshkey，需要绑定 远程服务器地址、本地密钥文件地址、远程登录的用户名、添加时间等信息，额外的信息，你可以酌情添加。
+1. 使用 yak set-sshkey 设置 sshkey 时，如果存在（根据数据表中 远程服务器地址 判断），则提示用户已经设置过
+2. yak set-sshkey 设置成功后，需要更新数据表
+```

@@ -77,6 +77,21 @@ export const shortcutCommands = sqliteTable("shortcut_commands", {
     .notNull(),
 });
 
+// SSH 免密登录记录表
+export const sshKeys = sqliteTable("ssh_keys", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  host: text("host").notNull().unique(),
+  username: text("username").notNull(),
+  localKeyPath: text("local_key_path").notNull(),
+  port: integer("port").default(22),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+});
+
 // 审计日志表（可选）
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
