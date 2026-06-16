@@ -6,6 +6,7 @@ export function mount(program: Command) {
   program
     .command("set-sshkey")
     .description("生成 SSH 密钥并配置免密登录远程服务器")
+    .helpOption("--help", "显示帮助信息")
     .option("-h, --host <host>", "远程服务器地址")
     .option("-u, --user <user>", "远程服务器的登录用户名")
     .option("-p, --password <password>", "远程服务器的登录密码")

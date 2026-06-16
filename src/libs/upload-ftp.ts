@@ -7,6 +7,7 @@ export function mount(program: Command) {
     .command("upload-ftp")
     .alias("ftp")
     .description("上传文件或文件夹到远程 FTP 服务器")
+    .helpOption("--help", "显示帮助信息")
     .option("-t, --type <type>", "上传类型，可选值: dir, file")
     .option("-h, --host <host>", "FTP 服务器地址")
     .option("-u, --user <user>", "FTP 用户名")

@@ -312,5 +312,7 @@ export type NewConfig = typeof schema.configs.$inferInsert;
 export type Config = typeof schema.configs.$inferSelect;
 export type NewSshKey = typeof schema.sshKeys.$inferInsert;
 export type SshKey = typeof schema.sshKeys.$inferSelect;
+export type NewAccount = typeof schema.accounts.$inferInsert;
+export type Account = typeof schema.accounts.$inferSelect;
 export type NewAuditLog = typeof schema.auditLogs.$inferInsert;
 export type AuditLog = typeof schema.auditLogs.$inferSelect;

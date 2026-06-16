@@ -13,6 +13,7 @@ import { mount as mountCreate } from "./libs/create.js";
 import { mount as mountSampleFile } from "./libs/sample-file.js";
 import { mount as mountUploadFtp } from "./libs/upload-ftp.js";
 import { mount as mountSetSshKey } from "./libs/set-sshkey.js";
+import { mount as mountLogin } from "./libs/login.js";
 
 dataPaths.ensure();
 
@@ -37,7 +38,7 @@ program
   .version(version, "-v, --version", "显示版本号")
   .addHelpText("after", siblingShortcutCommandHelp);
 
-program.name("yakky").helpOption("--help", "显示帮助信息");
+program.name("yakky").helpOption("-h, --help", "显示帮助信息");
 
 mountRepositry(program);
 mountTemplate(program);
@@ -45,6 +46,7 @@ mountCreate(program);
 mountSampleFile(program);
 mountUploadFtp(program);
 mountSetSshKey(program);
+mountLogin(program);
 
 // 主异步函数
 async function main() {

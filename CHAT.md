@@ -129,3 +129,8 @@
 1. 使用 yak set-sshkey 设置 sshkey 时，如果存在（根据数据表中 远程服务器地址 判断），则提示用户已经设置过
 2. yak set-sshkey 设置成功后，需要更新数据表
 ```
+
+```
+添加 yak whoami 命令，输出当前系统登录的用户名。文件目录实现与 yak repositry 一致。
+添加 yak profile 命令，输出当前系统登录的用户名。文件目录实现与 yak repositry 一致。
+```

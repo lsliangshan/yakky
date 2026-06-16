@@ -92,6 +92,23 @@ export const sshKeys = sqliteTable("ssh_keys", {
     .notNull(),
 });
 
+// 账号表（GitHub OAuth 登录）
+export const accounts = sqliteTable("accounts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  githubId: integer("github_id").notNull().unique(),
+  login: text("login").notNull(),
+  name: text("name"),
+  email: text("email"),
+  avatarUrl: text("avatar_url"),
+  accessToken: text("access_token").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+});
+
 // 审计日志表（可选）
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
