@@ -9,6 +9,7 @@ import {
 } from "../../utils/github-auth.js";
 import { logger } from "../../utils/logger.js";
 import { createSpinner } from "../../utils/spinner.js";
+import { syncUserLogin } from "../../utils/api.js";
 
 async function pollWithSpinner(
   clientId: string,
@@ -91,6 +92,18 @@ export async function login(): Promise<void> {
     avatarUrl: user.avatar_url,
     accessToken,
   });
+
+  // Step 6: 同步用户信息到后端
+  try {
+    await syncUserLogin({
+      userId: String(user.id),
+      email: user.email || email || user.login,
+      username: user.name || user.login,
+      access_token: accessToken,
+    });
+  } catch (e) {
+    logger.warn(`用户信息同步失败: ${e}`);
+  }
 
   logger.success(
     `登录成功: ${user.login}${user.name ? ` (${user.name})` : ""}`

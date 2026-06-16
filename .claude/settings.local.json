@@ -18,7 +18,8 @@
       "Bash(sed -i '' '185,186d' src/commands/repositry/init.ts)",
       "Bash(sed -i '' '185s/.*/\\\\t    logger.log\\(`          │   └── README.md`\\);/' src/commands/repositry/init.ts)",
       "Bash(echo \"exit: $?\")",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsup *)"
     ]
   },
   "disabledMcpjsonServers": [

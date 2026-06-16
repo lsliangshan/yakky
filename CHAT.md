@@ -134,3 +134,91 @@
 添加 yak whoami 命令，输出当前系统登录的用户名。文件目录实现与 yak repositry 一致。
 添加 yak profile 命令，输出当前系统登录的用户名。文件目录实现与 yak repositry 一致。
 ```
+
+```
+src 目录下创建一个 ui 目录，在 src/ui 目录下初始化一个 vue3 + typescript + tailwind.css + vite.js 项目。这个项目能与 yak 命令通信。
+1. ui 项目头部显示 yak login 的用户信息，包括头像、昵称、id等。
+2. ui 项目左侧有一个菜单，现在菜单有 "快捷命令管理"，
+添加 yak ui 命令，功能是在本地启动一个 ui 界面
+```
+
+```
+yak login 登录成功后，post 方式 调用 接口 http://127.0.0.1:3000/yakky-user/login 保存用户信息，传递参数示例如下:
+{
+  "userId": "user_001",
+  "email": "user@example.com",
+  "username": "张三",
+  "access_token": "eyJhbGciOiJIUzI1NiJ9..."
+}
+yak logout 退出登录后，post 方式 调用 接口 http://127.0.0.1:3000/yakky-user/logout 更新用户信息，传递参数示例如下:
+{
+  "userId": "user_001"
+}
+
+需要将接口请求进行统一的封装，http://127.0.0.1:3000 是 baseUrl，统一配置。
+```
+
+```
+新增接口封装，
+1. 新增命令，/yakky-shortcut-command/create ，所有参数必填，参数示例：
+{
+  "userId": "user_001",
+  "name": "deploy",
+  "description": "部署到生产环境",
+  "script": "#!/bin/bash\necho \"deploying...\""
+}
+2. 删除命令，/yakky-shortcut-command/delete ，参数示例：
+{
+  "userId": "user_001",
+  "id": "550e8400-e29b-41d4-a716-446655440000"
+}
+3. 分页查询命令列表，/yakky-shortcut-command/list ，pageIndex(选填,number类型，默认 `1`), pageSize(选填,number类型，默认 `20`), status(选填，boolean类型，默认 `true`)参数示例：
+{
+  "pageIndex": 1,
+  "pageSize": 20,
+  "userId": "user_001",
+  "status": true
+}
+4. 修改命令，/yakky-shortcut-command/update ，userId 和 id 必填，参数示例：
+{
+  "userId": "user_001",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "deploy",
+  "description": "部署到生产环境",
+  "script": "string"
+}
+5. 修改命令状态，/yakky-shortcut-command/updateStatus ，userId 和 id 必填，参数示例：
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "userId": "user_001",
+  "status": true
+}
+
+以上接口，与之前的 登录、退出 接口，将所有接口 url 统一管理
+```
+
+```
+`add` 命令，添加完快捷命令，
+1. 先使用 post 方式调用 接口 http://127.0.0.1:3000/yakky-shortcut-command/create ，保存快捷命令,如果接口返回失败，则提示用户失败，并中止命令执行；如果接口返回成功，则拿到返回数据，执行第2步，
+/yakky-shortcut-command/create 接口的传递参数示例如下：
+{
+  "userId": "user_001",
+  "name": "deploy",
+  "description": "部署到生产环境",
+  "script": "#!/bin/bash\necho \"deploying...\""
+}
+2. 向本地数据库中的  shortcut_commands 表添加记录，与目前 `add` 命令的处理逻辑一样，id 为 /yakky-shortcut-command/create 接口返回的 data.id。
+
+`edit` 命令，编辑完快捷命令，大概流程同 add 命令
+1. 先使用 post 方式调用 接口 http://127.0.0.1:3000/yakky-shortcut-command/update ，更新快捷命令,如果接口返回失败，则提示用户失败，并中止命令执行；/yakky-shortcut-command/update 接口的传递参数示例如下：
+{
+  "userId": "user_001",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "deploy",
+  "description": "部署到生产环境",
+  "script": "string"
+}
+2. 更新本地数据库 shortcut_commands 表中对应 userId + id 的记录。与目前 `edit` 命令的处理逻辑一样。
+
+`delete` 命令，
+```
