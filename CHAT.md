@@ -136,10 +136,13 @@
 ```
 
 ```
-src 目录下创建一个 ui 目录，在 src/ui 目录下初始化一个 vue3 + typescript + tailwind.css + vite.js 项目。这个项目能与 yak 命令通信。
-1. ui 项目头部显示 yak login 的用户信息，包括头像、昵称、id等。
-2. ui 项目左侧有一个菜单，现在菜单有 "快捷命令管理"，
-添加 yak ui 命令，功能是在本地启动一个 ui 界面
+src 目录下创建一个 ui 目录，在 src/ui 目录下初始化一个 vue3 + typescript + tailwind.css + element-plus + vite.js 项目。element-plus 需要配置 按需导入 和 动态导入。这个项目能与 yak 命令通信。
+1. ui 项目头部显示 yak login 的用户信息，包括头像、昵称、邮箱、id等。
+2. ui 项目左侧有一个菜单，现在菜单有 "快捷命令管理"，页面正文显示 tabbar + tabcontent，有 "所有" 和 ”我的“ 两个 tabbar，tabcontent 中渲染对应的快捷命令列表。
+2.1 ”所有“ 列表数据来源 listShortcutCommands() 的数据
+2.2 ”我的“ 列表数据来源 listShortcutCommands({userId: '用户的userId'}) 的数据
+2.3 列表渲染 ”快捷命令“ 卡片，卡片上显示 命令名称，命令描述，命令作者（通过 userId 字段， 调用  getUserDetail({userId}) 方法获取）
+添加 yak ui 命令，功能是在本地启动 ui 项目界面
 ```
 
 ```

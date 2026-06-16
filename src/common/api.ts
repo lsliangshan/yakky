@@ -2,6 +2,7 @@ export const API = {
   // 用户
   USER_LOGIN: "/yakky-user/login",
   USER_LOGOUT: "/yakky-user/logout",
+  USER_DETAIL: "/yakky-user/detail",
   // 快捷命令
   SHORTCUT_COMMAND_CREATE: "/yakky-shortcut-command/create",
   SHORTCUT_COMMAND_DELETE: "/yakky-shortcut-command/delete",

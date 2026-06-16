@@ -16,6 +16,10 @@ export async function syncUserLogout(params: { userId: string }) {
   return request(API.USER_LOGOUT, { body: params });
 }
 
+export async function getUserDetail(params: { userId: string }) {
+  return request(API.USER_DETAIL, { body: params });
+}
+
 // ========== 快捷命令 ==========
 
 export interface CreateShortcutCommandParams {
