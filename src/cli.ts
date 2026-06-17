@@ -14,6 +14,7 @@ import { mount as mountSampleFile } from "./libs/sample-file.js";
 import { mount as mountUploadFtp } from "./libs/upload-ftp.js";
 import { mount as mountSetSshKey } from "./libs/set-sshkey.js";
 import { mount as mountLogin } from "./libs/login.js";
+import { mount as mountUi } from "./libs/ui.js";
 
 dataPaths.ensure();
 
@@ -47,6 +48,7 @@ mountSampleFile(program);
 mountUploadFtp(program);
 mountSetSshKey(program);
 mountLogin(program);
+mountUi(program);
 
 // 主异步函数
 async function main() {

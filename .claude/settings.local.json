@@ -19,7 +19,11 @@
       "Bash(sed -i '' '185s/.*/\\\\t    logger.log\\(`          │   └── README.md`\\);/' src/commands/repositry/init.ts)",
       "Bash(echo \"exit: $?\")",
       "mcp__ide__getDiagnostics",
-      "Bash(npx tsup *)"
+      "Bash(npx tsup *)",
+      "Bash(npm view *)",
+      "Bash(npx vite *)",
+      "Bash(/Users/liangshan/workspace/zp/crm/yakky/src/ui/node_modules/.bin/vite --version)",
+      "Bash(lsof -ti:5173)"
     ]
   },
   "disabledMcpjsonServers": [
